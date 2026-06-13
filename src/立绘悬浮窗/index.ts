@@ -292,25 +292,27 @@ $(() => {
   }
 
   function openPanel() {
-    $panel.addClass('lh-visible'); // 先可见，rect 才有效
+    // 清除可能残留的切换动画类，避免本次定位带过渡 → 视觉"跳动"
+    $fab.removeClass('lh-anim'); $panel.removeClass('lh-anim');
+    $panel.addClass('lh-visible');
     panelVisible = true;
     // 有保存的面板位置 → 恢复原位（球也回到对应顶角）；否则首次按 side 布局
     const s = 读位置();
     if (validCoord(s.panelLeft, s.panelTop)) {
-      $panel.css({ left: s.panelLeft + 'px', top: s.panelTop + 'px', right: 'auto' });
-      parkFabToPanel(); // 球贴到面板对应顶角
+      const pl = s.panelLeft as number, pt = s.panelTop as number;
+      $panel.css({ left: pl + 'px', top: pt + 'px', right: 'auto' });
+      // 直接用保存的面板坐标算球位置，不读 DOM（避免 reflow 未完成时 rect 不准）
+      parkFabAt(pl, pt);
     } else {
-      layoutDocked();   // 首次：按 side 一次性定好球和面板
+      layoutDocked();
     }
     renderCats(); renderBtns(); updateImg();
   }
-  // 把悬浮球贴到面板顶部外侧的角（顶边对齐），面板不动
-  function parkFabToPanel() {
-    const pr = panelRect();
-    const top = Math.max(0, pr.top);
-    let left = side === 'right' ? (pr.right + DOCK_GAP) : (pr.left - DOCK_GAP - FAB_SIZE);
+  // 根据给定的面板坐标，把悬浮球贴到面板顶部外侧的角（顶边对齐），不读 DOM
+  function parkFabAt(panelLeft: number, panelTop: number) {
+    let left = side === 'right' ? (panelLeft + PANEL_WIDTH + DOCK_GAP) : (panelLeft - DOCK_GAP - FAB_SIZE);
     left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
-    $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
+    $fab.css({ left: left + 'px', top: Math.max(0, panelTop) + 'px', right: 'auto' });
   }
   function closePanel() {
     $panel.removeClass('lh-visible');
