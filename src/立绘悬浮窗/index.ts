@@ -364,26 +364,33 @@ $(() => {
   $gear.on('click', (e) => {
     e.stopPropagation();
     side = side === 'right' ? 'left' : 'right';
-    // 带动画地重排
-    $fab.addClass('lh-anim'); $panel.addClass('lh-anim');
+    $fab.addClass('lh-anim');
     if (panelVisible) {
-      layoutDocked(); // 球+面板按新 side 确定性重排
+      // 面板不动，只把悬浮球移到面板的另一个顶角（顶边对齐）
+      const pr = panelRect();
+      const top = Math.max(0, pr.top);
+      let left = side === 'right' ? (pr.right + DOCK_GAP) : (pr.left - DOCK_GAP - FAB_SIZE);
+      left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
+      $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
     } else {
+      // 面板没开 → 球贴到屏幕对应边
       const left = side === 'right' ? (viewportW() - FAB_SIZE - EDGE) : EDGE;
       const r = fabRect();
       $fab.css({ left: left + 'px', top: r.top + 'px', right: 'auto' });
     }
-    setTimeout(() => { $fab.removeClass('lh-anim'); $panel.removeClass('lh-anim'); }, 300);
-    // 保存 side + 目标坐标（读 style 设定值，不受动画过渡中间态影响）
+    setTimeout(() => $fab.removeClass('lh-anim'), 300);
+    // 保存 side + 球坐标（面板坐标不变，无需更新）
     const save: SavedPos = { side };
     save.fabLeft = parseFloat($fab.css('left')) || 0;
     save.fabTop = parseFloat($fab.css('top')) || 0;
     if (panelVisible) {
-      save.panelLeft = parseFloat($panel.css('left')) || 0;
-      save.panelTop = parseFloat($panel.css('top')) || 0;
+      const pr = panelRect();
+      save.panelLeft = pr.left; save.panelTop = pr.top;
+      save.panelManuallyPositioned = true; // 面板已是当前位置，重开时保持
+      panelManuallyPositioned = true;
     }
     写位置(save);
-    toastr.info('悬浮球已切换到' + (side === 'right' ? '右侧' : '左侧'), '');
+    toastr.info('悬浮球已切换到面板' + (side === 'right' ? '右上角' : '左上角'), '');
   });
 
   // ══════════════════════════════════════════════════════════
