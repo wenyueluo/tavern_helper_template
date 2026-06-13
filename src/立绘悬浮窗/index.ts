@@ -294,14 +294,28 @@ $(() => {
   function openPanel() {
     $panel.addClass('lh-visible'); // 先可见，rect 才有效
     panelVisible = true;
-    layoutDocked();                // 一次性定好球和面板位置
+    // 有保存的面板位置 → 恢复原位（球也回到对应顶角）；否则首次按 side 布局
+    const s = 读位置();
+    if (validCoord(s.panelLeft, s.panelTop)) {
+      $panel.css({ left: s.panelLeft + 'px', top: s.panelTop + 'px', right: 'auto' });
+      parkFabToPanel(); // 球贴到面板对应顶角
+    } else {
+      layoutDocked();   // 首次：按 side 一次性定好球和面板
+    }
     renderCats(); renderBtns(); updateImg();
+  }
+  // 把悬浮球贴到面板顶部外侧的角（顶边对齐），面板不动
+  function parkFabToPanel() {
+    const pr = panelRect();
+    const top = Math.max(0, pr.top);
+    let left = side === 'right' ? (pr.right + DOCK_GAP) : (pr.left - DOCK_GAP - FAB_SIZE);
+    left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
+    $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
   }
   function closePanel() {
     $panel.removeClass('lh-visible');
     panelVisible = false;
-    panelManuallyPositioned = false;
-    写位置({ panelManuallyPositioned: false });
+    // 不重置 panelManuallyPositioned，也不动球位置 → 重开时恢复原位
   }
 
   // ── 放大查看（滚轮缩放 + 拖动平移 + 双击复位）──
