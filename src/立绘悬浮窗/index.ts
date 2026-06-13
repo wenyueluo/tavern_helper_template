@@ -179,6 +179,15 @@ const 样式 = `
 $(() => {
   $('<style>').attr('script_id', 标记).text(样式).appendTo('head');
 
+  // ── 预加载所有立绘到浏览器缓存（每张约2MB，避免切换时现下载导致延迟）──
+  const preloaded: HTMLImageElement[] = [];
+  categories.forEach((c) => c.items.forEach((it) => {
+    const im = new Image();
+    im.src = it.url;
+    preloaded.push(im); // 持有引用，防止被 GC 提前回收
+  }));
+  console.log('[立绘悬浮窗] 开始预加载', preloaded.length, '张立绘');
+
   const saved = 读位置();
   let side: 'left' | 'right' = saved.side === 'left' ? 'left' : 'right';
 
@@ -246,7 +255,13 @@ $(() => {
     $btns.empty();
     cat().items.forEach((it, i) => {
       $('<div>').addClass('lh-btn').toggleClass('active', i === itemIdx)
-        .text(it.name).on('click', () => { itemIdx = i; renderBtns(); updateImg(); }).appendTo($btns);
+        .text(it.name)
+        .on('click', (e) => {
+          e.stopPropagation();
+          itemIdx = i;
+          renderBtns(); updateImg();
+        })
+        .appendTo($btns);
     });
   }
   function updateImg() { $img.attr('src', item().url).attr('alt', item().name); }
