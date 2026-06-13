@@ -283,7 +283,16 @@ $(() => {
   $close.on('mousedown', (e) => e.stopPropagation());
   $close.on('click', () => closePanel());
 
-  $(document).on('mousemove.lh touchmove.lh', (e) => {
+  // ── 关键：全局事件必须绑在悬浮球真正所在的文档/窗口上 ──
+  //   脚本的 document/window 指向 0x0 隐藏 iframe，鼠标在父页面移动时
+  //   iframe 的 document 收不到 mousemove/mouseup → 点击/拖动全失效。
+  //   $fab[0].ownerDocument 才是父页面文档。
+  const ownerDoc = ($fab[0] as HTMLElement).ownerDocument || document;
+  const ownerWin = ownerDoc.defaultView || window;
+  const $doc = $(ownerDoc);
+  const $win = $(ownerWin);
+
+  $doc.on('mousemove.lh touchmove.lh', (e) => {
     if (!dragTarget) return;
     const pos = getXY(e); if (!pos) return;
     const dx = pos.x - startX, dy = pos.y - startY;
@@ -301,7 +310,7 @@ $(() => {
     }
   });
 
-  $(document).on('mouseup.lh touchend.lh', () => {
+  $doc.on('mouseup.lh touchend.lh', () => {
     if (!dragTarget) return;
     if (dragTarget === 'fab') {
       $fab.removeClass('is-dragging');
@@ -320,7 +329,7 @@ $(() => {
   });
 
   // ── 窗口缩放：把元素拉回视口内 ──
-  $(window).on('resize.lh', () => {
+  $win.on('resize.lh', () => {
     const r = fabRect();
     const left = Math.max(0, Math.min(viewportW() - FAB_SIZE, r.left));
     const top = Math.max(0, Math.min(viewportH() - FAB_SIZE, r.top));
@@ -362,10 +371,10 @@ $(() => {
     '主视口:', viewportW() + 'x' + viewportH());
   toastr.success('立绘悬浮窗已加载，点击右侧🖼展开', '');
 
-  // ── 卸载 ──
+  // ── 卸载（解绑的也必须是父文档/窗口上的事件）──
   $(window).on('pagehide', () => {
     $(`[script_id="${标记}"]`).remove();
-    $(document).off('.lh');
-    $(window).off('.lh');
+    $doc.off('.lh');
+    $win.off('.lh');
   });
 });
