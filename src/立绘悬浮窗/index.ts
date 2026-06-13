@@ -1,20 +1,16 @@
 /**
  * 立绘展示悬浮窗 —— 酒馆助手脚本（纯 jQuery 版）
  *
- * 【关键教训】
- *   1. 脚本跑在 0x0 隐藏 iframe 里，window.innerWidth/innerHeight 不可靠
- *      → 视口尺寸用 viewportW()/viewportH()（读 window.parent）
- *   2. 全局事件（mousemove/mouseup/resize）必须绑在 $fab[0].ownerDocument
- *      （父页面文档），否则点击/拖动失效
- *   3. 初始定位用 CSS，不依赖 innerWidth，保证可见
+ * 【设计原则：硬绑定 + 独立记录 + 零自动跳转】
+ *   - 悬浮球：独立位置，拖动即存，加载即恢复，永不自动移动
+ *   - 面板：  独立位置，拖动即存，加载/打开都用自己存的位置，永不自动移动
+ *   - 点击球：只切换面板显示/隐藏，谁的位置都不动
+ *   - 没有 ⚙ 切换、没有 side、没有自动布局/跟随/联动
  *
- * 【功能】
- *   1. 可拖动悬浮球（位置持久化）
- *   2. 点击悬浮球展开立绘面板，面板默认停靠在悬浮球所在侧的顶部角落
- *   3. 面板可拖动（标题栏），拖动后独立；关闭再打开重新停靠
- *   4. ⚙ 设置按钮：切换悬浮球/面板在页面左侧还是右侧
- *   5. 点击立绘大图 → 全屏放大查看细节
- *   6. 5 个分类标签 + 版本切换按钮
+ * 【关键环境约束】
+ *   1. 脚本跑在 0x0 隐藏 iframe，window.innerWidth 不可靠 → viewportW/H 读父窗口
+ *   2. 全局事件绑到 $fab[0].ownerDocument（父页面），否则拖动失效
+ *   3. 初始位置：有存储用存储，无存储用 CSS 默认（不依赖 innerWidth）
  */
 
 // ══════════════════════════════════════════════════════════════
@@ -52,12 +48,8 @@ const categories: Category[] = [
 // ══════════════════════════════════════════════════════════════
 const 标记 = getScriptId();
 const PANEL_WIDTH = 280;
-const PANEL_MIN_VISIBLE = 80;
 const FAB_SIZE = 46;
 const DRAG_THRESHOLD = 4;
-const DOCK_TOP = 60; // 面板/悬浮球停靠时距顶部像素
-const DOCK_GAP = 8;  // 悬浮球与面板之间的间隙
-const EDGE = 16;     // 距屏幕边缘像素
 
 function viewportW(): number {
   let w = 0;
@@ -75,13 +67,11 @@ function viewportH(): number {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 3. 持久化（脚本变量）
+// 3. 持久化（脚本变量）—— 球和面板各自独立的坐标
 // ══════════════════════════════════════════════════════════════
 interface SavedPos {
   fabLeft?: number; fabTop?: number;
   panelLeft?: number; panelTop?: number;
-  panelManuallyPositioned?: boolean;
-  side?: 'left' | 'right';
 }
 function 读位置(): SavedPos {
   try { return (getVariables({ type: 'script' }) as SavedPos) || {}; } catch { return {}; }
@@ -98,16 +88,14 @@ const 样式 = `
   position:fixed; right:16px; top:40%; width:46px; height:46px; border-radius:50%;
   background:#1b1030; border:1px solid rgba(167,139,250,.4); color:#c4b5fd;
   font-size:22px; display:flex; align-items:center; justify-content:center;
-  cursor:grab; user-select:none; touch-action:none; z-index:2147483647;
+  cursor:grab; user-select:none; touch-action:none; z-index:2147483646;
   box-shadow:0 0 16px rgba(167,139,250,.35), 0 3px 12px rgba(0,0,0,.5);
   transition:filter .15s, box-shadow .2s;
 }
-/* 仅 ⚙ 切换时给位置加缓动；拖动/展开时无过渡保证跟手 */
-.lh-fab.lh-anim, .lh-panel.lh-anim { transition:left .25s ease, top .25s ease; }
 .lh-fab:hover { filter:brightness(1.2); box-shadow:0 0 26px rgba(167,139,250,.55); }
 .lh-fab.is-dragging { cursor:grabbing; }
 .lh-panel {
-  position:fixed; right:16px; top:60px;
+  position:fixed; right:74px; top:60px;
   width:280px; background:#120c1f;
   border:1px solid rgba(167,139,250,.3); border-radius:14px;
   box-shadow:0 10px 40px rgba(0,0,0,.6); z-index:2147483645;
@@ -122,11 +110,9 @@ const 样式 = `
 }
 .lh-head.is-dragging { cursor:grabbing; }
 .lh-head-title { flex:1; }
-.lh-head-btns { display:flex; align-items:center; gap:4px; }
-.lh-gear, .lh-close { cursor:pointer; width:22px; height:22px; line-height:22px;
+.lh-close { cursor:pointer; width:22px; height:22px; line-height:22px;
   text-align:center; border-radius:6px; color:#c4b5fd; font-size:13px; }
-.lh-gear:hover, .lh-close:hover { background:rgba(167,139,250,.2); }
-.lh-side-hint { font-size:10px; color:#8a7fb5; margin-left:4px; }
+.lh-close:hover { background:rgba(167,139,250,.2); }
 .lh-categories { display:flex; flex-wrap:wrap; gap:4px; padding:6px 10px;
   border-bottom:1px solid rgba(167,139,250,.15); }
 .lh-cat-tab { flex:1; min-width:48px; padding:4px 2px; font-size:11px;
@@ -179,48 +165,41 @@ const 样式 = `
 $(() => {
   $('<style>').attr('script_id', 标记).text(样式).appendTo('head');
 
-  // ── 预加载所有立绘到浏览器缓存（每张约2MB，避免切换时现下载导致延迟）──
+  // 预加载所有立绘到缓存（每张约2MB，避免切换时现下载）
   const preloaded: HTMLImageElement[] = [];
   categories.forEach((c) => c.items.forEach((it) => {
-    const im = new Image();
-    im.src = it.url;
-    preloaded.push(im); // 持有引用，防止被 GC 提前回收
+    const im = new Image(); im.src = it.url; preloaded.push(im);
   }));
-  console.log('[立绘悬浮窗] 开始预加载', preloaded.length, '张立绘');
 
   const saved = 读位置();
-  let side: 'left' | 'right' = saved.side === 'left' ? 'left' : 'right';
 
+  // 坐标有效性校验（防旧版坏坐标 / 视口外）
   function validCoord(left: unknown, top: unknown): boolean {
     if (typeof left !== 'number' || typeof top !== 'number') return false;
     if (!isFinite(left) || !isFinite(top)) return false;
     return left >= -4 && top >= -4 && left <= viewportW() - 10 && top <= viewportH() - 10;
   }
 
-  // ── 悬浮球 ──
+  // ── 悬浮球：恢复存储位置，无存储用 CSS 默认 ──
   const $fab = $('<div>').attr('script_id', 标记).addClass('lh-fab').text('🖼').appendTo('body');
   if (validCoord(saved.fabLeft, saved.fabTop)) {
     $fab.css({ left: saved.fabLeft + 'px', top: saved.fabTop + 'px', right: 'auto' });
-  } else {
-    // 无有效存储 → 按 side 设置默认靠边
-    if (side === 'left') $fab.css({ left: '16px', right: 'auto' });
-    if (saved.fabLeft !== undefined) 写位置({ fabLeft: undefined, fabTop: undefined });
+  } else if (saved.fabLeft !== undefined) {
+    写位置({ fabLeft: undefined, fabTop: undefined }); // 清坏坐标
   }
 
-  // ── 面板 ──
+  // ── 面板：恢复存储位置，无存储用 CSS 默认 ──
   const $panel = $('<div>').attr('script_id', 标记).addClass('lh-panel').appendTo('body');
-  let panelManuallyPositioned = saved.panelManuallyPositioned === true
-    && validCoord(saved.panelLeft, saved.panelTop);
-  if (panelManuallyPositioned) {
+  if (validCoord(saved.panelLeft, saved.panelTop)) {
     $panel.css({ left: saved.panelLeft + 'px', top: saved.panelTop + 'px', right: 'auto' });
+  } else if (saved.panelLeft !== undefined) {
+    写位置({ panelLeft: undefined, panelTop: undefined });
   }
 
-  // 标题栏：标题 + [⚙设置] [✕关闭]
+  // 标题栏：标题 + [✕关闭]（没有 ⚙ 切换按钮）
   const $head = $('<div>').addClass('lh-head').appendTo($panel);
   $('<span>').addClass('lh-head-title').text('立绘展示').appendTo($head);
-  const $headBtns = $('<div>').addClass('lh-head-btns').appendTo($head);
-  const $gear = $('<span>').addClass('lh-gear').attr('title', '切换左右侧').text('⚙').appendTo($headBtns);
-  const $close = $('<span>').addClass('lh-close').attr('title', '关闭').text('✕').appendTo($headBtns);
+  const $close = $('<span>').addClass('lh-close').attr('title', '关闭').text('✕').appendTo($head);
 
   const $cats = $('<div>').addClass('lh-categories').appendTo($panel);
   const $imgWrap = $('<div>').addClass('lh-img-wrap').appendTo($panel);
@@ -243,7 +222,7 @@ $(() => {
     $cats.empty();
     categories.forEach((c, i) => {
       $('<div>').addClass('lh-cat-tab').toggleClass('active', i === catIdx)
-        .text(c.name).on('click', () => switchCat(i)).appendTo($cats);
+        .text(c.name).on('click', (e) => { e.stopPropagation(); switchCat(i); }).appendTo($cats);
     });
   }
   function switchCat(idx: number) {
@@ -255,81 +234,33 @@ $(() => {
     $btns.empty();
     cat().items.forEach((it, i) => {
       $('<div>').addClass('lh-btn').toggleClass('active', i === itemIdx)
-        .text(it.name)
-        .on('click', (e) => {
-          e.stopPropagation();
-          itemIdx = i;
-          renderBtns(); updateImg();
-        })
+        .text(it.name).on('click', (e) => { e.stopPropagation(); itemIdx = i; renderBtns(); updateImg(); })
         .appendTo($btns);
     });
   }
   function updateImg() { $img.attr('src', item().url).attr('alt', item().name); }
 
-  // ── 算出「球 + 面板」的最终位置 ──
-  //   水平方向完全由 side 决定（确定性，不依赖球的残留 left，避免重开漂移）；
-  //   垂直方向以球当前 top 为锚。两者一次性定好。
-  //   side='right' → 球在右上角(靠右边)，面板在球左侧
-  //   side='left'  → 球在左上角(靠左边)，面板在球右侧
-  function layoutDocked() {
-    const fr = fabRect();
-    const fabTop = Math.max(EDGE, Math.min(viewportH() - 120, fr.top || EDGE));
-
-    let fabLeft: number, panelLeft: number;
-    if (side === 'right') {
-      fabLeft = viewportW() - FAB_SIZE - EDGE;             // 球靠右边
-      panelLeft = fabLeft - DOCK_GAP - PANEL_WIDTH;        // 面板在球左侧
-      if (panelLeft < EDGE) panelLeft = EDGE;
-    } else {
-      fabLeft = EDGE;                                      // 球靠左边
-      panelLeft = fabLeft + FAB_SIZE + DOCK_GAP;           // 面板在球右侧
-      if (panelLeft + PANEL_WIDTH > viewportW() - EDGE) panelLeft = viewportW() - EDGE - PANEL_WIDTH;
-    }
-    const panelTop = fabTop; // 顶边对齐
-
-    $fab.css({ left: fabLeft + 'px', top: fabTop + 'px', right: 'auto' });
-    $panel.css({ left: panelLeft + 'px', top: panelTop + 'px', right: 'auto' });
-  }
-
+  // ── 打开/关闭面板：只切显示，不动任何位置 ──
   function openPanel() {
-    // 清除可能残留的切换动画类，避免本次定位带过渡 → 视觉"跳动"
-    $fab.removeClass('lh-anim'); $panel.removeClass('lh-anim');
     $panel.addClass('lh-visible');
     panelVisible = true;
-    // 有保存的面板位置 → 恢复原位（球也回到对应顶角）；否则首次按 side 布局
-    const s = 读位置();
-    if (validCoord(s.panelLeft, s.panelTop)) {
-      const pl = s.panelLeft as number, pt = s.panelTop as number;
-      $panel.css({ left: pl + 'px', top: pt + 'px', right: 'auto' });
-      // 直接用保存的面板坐标算球位置，不读 DOM（避免 reflow 未完成时 rect 不准）
-      parkFabAt(pl, pt);
-    } else {
-      layoutDocked();
-    }
     renderCats(); renderBtns(); updateImg();
-  }
-  // 根据给定的面板坐标，把悬浮球贴到面板顶部外侧的角（顶边对齐），不读 DOM
-  function parkFabAt(panelLeft: number, panelTop: number) {
-    let left = side === 'right' ? (panelLeft + PANEL_WIDTH + DOCK_GAP) : (panelLeft - DOCK_GAP - FAB_SIZE);
-    left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
-    $fab.css({ left: left + 'px', top: Math.max(0, panelTop) + 'px', right: 'auto' });
   }
   function closePanel() {
     $panel.removeClass('lh-visible');
     panelVisible = false;
-    // 不重置 panelManuallyPositioned，也不动球位置 → 重开时恢复原位
   }
 
-  // ── 放大查看（滚轮缩放 + 拖动平移 + 双击复位）──
-  let zScale = 1, zX = 0, zY = 0;            // 当前缩放/平移
+  // ══════════════════════════════════════════════════════════
+  // 6. 放大查看（滚轮缩放 + 拖动平移 + 双击复位）
+  // ══════════════════════════════════════════════════════════
+  let zScale = 1, zX = 0, zY = 0;
   const Z_MIN = 1, Z_MAX = 6;
   function applyZoom() {
-    (($zoomImg[0] as HTMLElement)).style.transform =
-      `translate(${zX}px, ${zY}px) scale(${zScale})`;
+    ($zoomImg[0] as HTMLElement).style.transform = `translate(${zX}px, ${zY}px) scale(${zScale})`;
     $zoomImg.toggleClass('lh-zoom-grab', zScale > 1);
   }
   function resetZoom() { zScale = 1; zX = 0; zY = 0; applyZoom(); }
-
   function openZoom() {
     $zoomImg.attr('src', item().url).attr('alt', item().name);
     $zoomCap.text(cat().name + ' · ' + item().name);
@@ -338,30 +269,26 @@ $(() => {
   }
   function closeZoom() { $zoom.removeClass('lh-zoom-show'); }
   $imgWrap.on('click', openZoom);
-  $zoom.on('click', closeZoom);                       // 点遮罩空白处关闭
-  $zoomImg.on('click', (e) => e.stopPropagation());   // 点图片本身不关闭
+  $zoom.on('click', closeZoom);
+  $zoomImg.on('click', (e) => e.stopPropagation());
   $zoomClose.on('click', closeZoom);
 
-  // 滚轮缩放（以鼠标位置为中心）
   $zoomImg.on('wheel', (e) => {
     e.preventDefault(); e.stopPropagation();
     const oe = e.originalEvent as WheelEvent;
     const rect = ($zoomImg[0] as HTMLElement).getBoundingClientRect();
-    // 鼠标相对图片中心的偏移（缩放前）
     const cx = oe.clientX - (rect.left + rect.width / 2);
     const cy = oe.clientY - (rect.top + rect.height / 2);
     const prev = zScale;
     const factor = oe.deltaY < 0 ? 1.15 : 1 / 1.15;
     zScale = Math.max(Z_MIN, Math.min(Z_MAX, zScale * factor));
     const ratio = zScale / prev;
-    // 让鼠标指向的点保持不动
     zX = (zX - cx) * ratio + cx;
     zY = (zY - cy) * ratio + cy;
     if (zScale === 1) { zX = 0; zY = 0; }
     applyZoom();
   });
 
-  // 拖动平移（放大后）
   let zDragging = false, zSX = 0, zSY = 0, zOX = 0, zOY = 0;
   $zoomImg.on('mousedown touchstart', (e) => {
     if (zScale <= 1) return;
@@ -372,50 +299,13 @@ $(() => {
     $zoomImg.addClass('lh-zoom-grabbing');
     e.preventDefault(); e.stopPropagation();
   });
-  // 双击复位
   $zoomImg.on('dblclick', (e) => { e.stopPropagation(); resetZoom(); });
 
-  // ── ⚙ 切换左右侧 ──
-  $gear.on('mousedown', (e) => e.stopPropagation()); // 别触发面板拖动
-  $gear.on('click', (e) => {
-    e.stopPropagation();
-    side = side === 'right' ? 'left' : 'right';
-    $fab.addClass('lh-anim');
-    if (panelVisible) {
-      // 面板不动，只把悬浮球移到面板的另一个顶角（顶边对齐）
-      const pr = panelRect();
-      const top = Math.max(0, pr.top);
-      let left = side === 'right' ? (pr.right + DOCK_GAP) : (pr.left - DOCK_GAP - FAB_SIZE);
-      left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
-      $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
-    } else {
-      // 面板没开 → 球贴到屏幕对应边
-      const left = side === 'right' ? (viewportW() - FAB_SIZE - EDGE) : EDGE;
-      const r = fabRect();
-      $fab.css({ left: left + 'px', top: r.top + 'px', right: 'auto' });
-    }
-    setTimeout(() => $fab.removeClass('lh-anim'), 300);
-    // 保存 side + 球坐标（面板坐标不变，无需更新）
-    const save: SavedPos = { side };
-    save.fabLeft = parseFloat($fab.css('left')) || 0;
-    save.fabTop = parseFloat($fab.css('top')) || 0;
-    if (panelVisible) {
-      const pr = panelRect();
-      save.panelLeft = pr.left; save.panelTop = pr.top;
-      save.panelManuallyPositioned = true; // 面板已是当前位置，重开时保持
-      panelManuallyPositioned = true;
-    }
-    写位置(save);
-    toastr.info('悬浮球已切换到面板' + (side === 'right' ? '右上角' : '左上角'), '');
-  });
-
   // ══════════════════════════════════════════════════════════
-  // 6. 拖动
+  // 7. 拖动 —— 球和面板完全独立，各拖各的，各存各的
   // ══════════════════════════════════════════════════════════
   let dragTarget: 'fab' | 'panel' | null = null;
-  let startX = 0, startY = 0, moved = false;
-  // 拖动开始时同时记录悬浮球与面板的起始坐标（用于整体联动）
-  let fabStartLeft = 0, fabStartTop = 0, panelStartLeft = 0, panelStartTop = 0;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0, moved = false;
 
   function getXY(e: JQuery.TriggeredEvent): { x: number; y: number } | null {
     const oe = e.originalEvent;
@@ -425,29 +315,22 @@ $(() => {
     }
     return { x: (oe as MouseEvent).clientX, y: (oe as MouseEvent).clientY };
   }
-
-  function fabRect() { return ($fab[0] as HTMLElement).getBoundingClientRect(); }
-  function panelRect() { return ($panel[0] as HTMLElement).getBoundingClientRect(); }
-
-  function recordStarts(pos: { x: number; y: number }) {
-    startX = pos.x; startY = pos.y; moved = false;
-    // 清掉可能残留的切换动画类，保证拖动 100% 跟手无缓动
-    $fab.removeClass('lh-anim'); $panel.removeClass('lh-anim');
-    const fr = fabRect(), pr = panelRect();
-    fabStartLeft = fr.left; fabStartTop = fr.top;
-    panelStartLeft = pr.left; panelStartTop = pr.top;
-  }
+  function rectOf($el: JQuery) { return ($el[0] as HTMLElement).getBoundingClientRect(); }
 
   $fab.on('mousedown touchstart', (e) => {
     const pos = getXY(e); if (!pos) return;
-    dragTarget = 'fab'; recordStarts(pos);
+    dragTarget = 'fab'; moved = false;
+    const r = rectOf($fab);
+    startX = pos.x; startY = pos.y; startLeft = r.left; startTop = r.top;
     $fab.addClass('is-dragging');
     e.preventDefault();
   });
 
   $head.on('mousedown touchstart', (e) => {
     const pos = getXY(e); if (!pos) return;
-    dragTarget = 'panel'; recordStarts(pos);
+    dragTarget = 'panel'; moved = false;
+    const r = rectOf($panel);
+    startX = pos.x; startY = pos.y; startLeft = r.left; startTop = r.top;
     $head.addClass('is-dragging'); $panel.addClass('lh-panel-dragging');
     e.preventDefault();
   });
@@ -460,7 +343,7 @@ $(() => {
   const $doc = $(ownerDoc);
   const $win = $(ownerWin);
 
-  // ── 放大图的拖动平移（全局 move/up）──
+  // 放大图平移
   $doc.on('mousemove.lhzoom touchmove.lhzoom', (e) => {
     if (!zDragging) return;
     const oe = e.originalEvent as MouseEvent | TouchEvent;
@@ -473,90 +356,72 @@ $(() => {
   });
   $doc.on('mouseup.lhzoom touchend.lhzoom', () => {
     if (!zDragging) return;
-    zDragging = false;
-    $zoomImg.removeClass('lh-zoom-grabbing');
+    zDragging = false; $zoomImg.removeClass('lh-zoom-grabbing');
   });
 
+  // 球/面板拖动
   $doc.on('mousemove.lh touchmove.lh', (e) => {
     if (!dragTarget) return;
     const pos = getXY(e); if (!pos) return;
     const dx = pos.x - startX, dy = pos.y - startY;
     if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) moved = true;
 
-    // 面板打开时：悬浮球和面板作为整体一起移动（拖任意一个，另一个同步位移）
-    if (panelVisible) {
-      const fl = Math.max(0, Math.min(viewportW() - FAB_SIZE, fabStartLeft + dx));
-      const ft = Math.max(0, Math.min(viewportH() - FAB_SIZE, fabStartTop + dy));
-      const pl = panelStartLeft + (fl - fabStartLeft);
-      const pt = panelStartTop + (ft - fabStartTop);
-      $fab.css({ left: fl + 'px', top: ft + 'px', right: 'auto' });
-      $panel.css({ left: pl + 'px', top: pt + 'px', right: 'auto' });
-    } else {
-      // 面板关闭：只动悬浮球
-      const fl = Math.max(0, Math.min(viewportW() - FAB_SIZE, fabStartLeft + dx));
-      const ft = Math.max(0, Math.min(viewportH() - FAB_SIZE, fabStartTop + dy));
-      $fab.css({ left: fl + 'px', top: ft + 'px', right: 'auto' });
-    }
+    const $el = dragTarget === 'fab' ? $fab : $panel;
+    const w = dragTarget === 'fab' ? FAB_SIZE : PANEL_WIDTH;
+    const minVisible = dragTarget === 'fab' ? FAB_SIZE : 80;
+    const left = Math.max(-(w - minVisible), Math.min(viewportW() - minVisible, startLeft + dx));
+    const top = Math.max(0, Math.min(viewportH() - minVisible, startTop + dy));
+    $el.css({ left: left + 'px', top: top + 'px', right: 'auto' });
   });
 
   $doc.on('mouseup.lh touchend.lh', () => {
     if (!dragTarget) return;
-    $fab.removeClass('is-dragging');
-    $head.removeClass('is-dragging'); $panel.removeClass('lh-panel-dragging');
-
-    if (dragTarget === 'fab' && !moved) {
-      // 没拖动 = 点击 → 开/关面板
-      panelVisible ? closePanel() : openPanel();
-    } else {
-      const fr = fabRect();
-      // 根据悬浮球落点更新 side
-      side = (fr.left + FAB_SIZE / 2) > viewportW() / 2 ? 'right' : 'left';
-      const save: SavedPos = { fabLeft: fr.left, fabTop: fr.top, side };
-      if (panelVisible) {
-        const pr = panelRect();
-        save.panelLeft = pr.left; save.panelTop = pr.top;
+    if (dragTarget === 'fab') {
+      $fab.removeClass('is-dragging');
+      if (!moved) {
+        panelVisible ? closePanel() : openPanel(); // 点击=开关面板，位置不变
+      } else {
+        const r = rectOf($fab);
+        写位置({ fabLeft: r.left, fabTop: r.top }); // 拖动结束才存球坐标
       }
-      写位置(save);
+    } else {
+      $head.removeClass('is-dragging'); $panel.removeClass('lh-panel-dragging');
+      if (moved) {
+        const r = rectOf($panel);
+        写位置({ panelLeft: r.left, panelTop: r.top }); // 拖动结束才存面板坐标
+      }
     }
     dragTarget = null;
   });
 
-  // ── 窗口缩放 ──
+  // ── 窗口缩放：仅把超出视口的元素拉回，不改变相对布局 ──
   $win.on('resize.lh', () => {
-    const r = fabRect();
-    const left = Math.max(0, Math.min(viewportW() - FAB_SIZE, r.left));
-    const top = Math.max(0, Math.min(viewportH() - FAB_SIZE, r.top));
-    $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
+    const fr = rectOf($fab);
+    $fab.css({
+      left: Math.max(0, Math.min(viewportW() - FAB_SIZE, fr.left)) + 'px',
+      top: Math.max(0, Math.min(viewportH() - FAB_SIZE, fr.top)) + 'px',
+      right: 'auto',
+    });
     if (panelVisible) {
-      if (!panelManuallyPositioned) dockPanel();
-      else {
-        const pr = ($panel[0] as HTMLElement).getBoundingClientRect();
-        $panel.css({
-          left: Math.max(0, Math.min(viewportW() - PANEL_WIDTH, pr.left)) + 'px',
-          top: Math.max(0, Math.min(viewportH() - PANEL_MIN_VISIBLE, pr.top)) + 'px',
-          right: 'auto',
-        });
-      }
+      const pr = rectOf($panel);
+      $panel.css({
+        left: Math.max(0, Math.min(viewportW() - PANEL_WIDTH, pr.left)) + 'px',
+        top: Math.max(0, Math.min(viewportH() - 80, pr.top)) + 'px',
+        right: 'auto',
+      });
     }
   });
 
-  // ── 兜底自检：屏外拉回 ──
-  function ensureVisible() {
-    const el = $fab[0] as HTMLElement;
-    const r = el.getBoundingClientRect();
+  // ── 兜底：球在视口外才拉回（只针对球，不碰面板）──
+  setTimeout(() => {
+    const r = rectOf($fab);
     const vw = viewportW(), vh = viewportH();
-    const offscreen = r.width === 0 || r.height === 0
-      || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh;
-    if (offscreen) {
+    if (r.width === 0 || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh) {
       $fab.css({ left: (vw - FAB_SIZE - 16) + 'px', top: Math.round(vh * 0.4) + 'px', right: 'auto' });
     }
-  }
-  ensureVisible();
-  setTimeout(ensureVisible, 500);
+  }, 500);
 
-  console.log('[立绘悬浮窗] jQuery版已挂载, side:', side,
-    '主视口:', viewportW() + 'x' + viewportH());
-  toastr.success('立绘悬浮窗已加载，点击右侧🖼展开', '');
+  toastr.success('立绘悬浮窗已加载，点击🖼展开', '');
 
   // ── 卸载 ──
   $(window).on('pagehide', () => {
