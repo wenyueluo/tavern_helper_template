@@ -153,20 +153,34 @@ $(() => {
 
   const saved = 读位置();
 
-  // ── 悬浮球（默认 CSS 定位；有存储坐标才覆盖为 left/top）──
+  // ── 坐标有效性校验 ──
+  //   旧版（Vue/早期jQuery）在 0x0 的 iframe 里用 innerWidth 算出 -62 这种坏坐标
+  //   并持久化到了脚本变量。这里必须校验：坐标在主视口内才用，否则忽略→走CSS默认定位。
+  function validCoord(left: unknown, top: unknown, w: number, h: number): boolean {
+    if (typeof left !== 'number' || typeof top !== 'number') return false;
+    if (!isFinite(left) || !isFinite(top)) return false;
+    // 必须落在可视区域内（留 4px 容差），否则视为坏坐标
+    return left >= -4 && top >= -4 && left <= viewportW() - 10 && top <= viewportH() - 10;
+  }
+
+  // ── 悬浮球（默认 CSS 定位 right:16px/top:40%；仅当存储坐标有效才覆盖）──
   const $fab = $('<div>')
     .attr('script_id', 标记)
     .addClass('lh-fab')
     .text('🖼') // 🖼
     .appendTo('body');
-  if (typeof saved.fabLeft === 'number' && typeof saved.fabTop === 'number') {
+  if (validCoord(saved.fabLeft, saved.fabTop, FAB_SIZE, FAB_SIZE)) {
     $fab.css({ left: saved.fabLeft + 'px', top: saved.fabTop + 'px', right: 'auto' });
+  } else if (saved.fabLeft !== undefined) {
+    // 检测到坏坐标 → 清掉，避免下次再读到
+    写位置({ fabLeft: undefined, fabTop: undefined });
   }
 
   // ── 面板 ──
   const $panel = $('<div>').attr('script_id', 标记).addClass('lh-panel').appendTo('body');
-  let panelManuallyPositioned = saved.panelManuallyPositioned === true;
-  if (panelManuallyPositioned && typeof saved.panelLeft === 'number' && typeof saved.panelTop === 'number') {
+  let panelManuallyPositioned = saved.panelManuallyPositioned === true
+    && validCoord(saved.panelLeft, saved.panelTop, PANEL_WIDTH, PANEL_MIN_VISIBLE);
+  if (panelManuallyPositioned) {
     $panel.css({ left: saved.panelLeft + 'px', top: saved.panelTop + 'px', right: 'auto', transform: 'none' });
   }
 
@@ -323,6 +337,25 @@ $(() => {
       }
     }
   });
+
+  // ── 兜底自检：挂载后检查悬浮球真实屏幕坐标，不在视口内就强制拉回右侧 ──
+  function ensureVisible() {
+    const el = $fab[0] as HTMLElement;
+    const r = el.getBoundingClientRect();
+    const vw = viewportW(), vh = viewportH();
+    const offscreen = r.width === 0 || r.height === 0
+      || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh;
+    console.log('[立绘悬浮窗] 悬浮球实测坐标:', JSON.stringify({ left: r.left, top: r.top, w: r.width, h: r.height }),
+      '父挂载点:', el.ownerDocument === document ? 'iframe-doc' : 'parent-doc',
+      offscreen ? '⚠️屏外→已拉回' : '✅可见');
+    if (offscreen) {
+      // 强制定位到右侧可见处（用主视口尺寸算）
+      $fab.css({ left: (vw - FAB_SIZE - 16) + 'px', top: Math.round(vh * 0.4) + 'px', right: 'auto' });
+    }
+  }
+  // 立即检查 + 延迟再查一次（等布局稳定）
+  ensureVisible();
+  setTimeout(ensureVisible, 500);
 
   console.log('[立绘悬浮窗] jQuery版已挂载, ID:', 标记,
     'iframe视口:', window.innerWidth + 'x' + window.innerHeight,
