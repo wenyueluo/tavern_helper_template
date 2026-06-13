@@ -100,9 +100,10 @@ const 样式 = `
   font-size:22px; display:flex; align-items:center; justify-content:center;
   cursor:grab; user-select:none; touch-action:none; z-index:2147483647;
   box-shadow:0 0 16px rgba(167,139,250,.35), 0 3px 12px rgba(0,0,0,.5);
-  transition:filter .15s, box-shadow .2s, left .25s ease, top .25s ease;
+  transition:filter .15s, box-shadow .2s;
 }
-.lh-fab.is-dragging { transition:filter .15s, box-shadow .2s; }
+/* 仅 ⚙ 切换时给位置加缓动；拖动/展开时无过渡保证跟手 */
+.lh-fab.lh-anim, .lh-panel.lh-anim { transition:left .25s ease, top .25s ease; }
 .lh-fab:hover { filter:brightness(1.2); box-shadow:0 0 26px rgba(167,139,250,.55); }
 .lh-fab.is-dragging { cursor:grabbing; }
 .lh-panel {
@@ -242,42 +243,41 @@ $(() => {
   }
   function updateImg() { $img.attr('src', item().url).attr('alt', item().name); }
 
-  // ── 面板停靠：以悬浮球当前位置为锚，面板出现在悬浮球内侧、顶边对齐 ──
-  //   side='right' → 悬浮球在右，面板在它左边；面板顶 = 悬浮球顶
-  //   side='left'  → 悬浮球在左，面板在它右边
-  function dockPanel() {
+  // ── 以悬浮球当前位置为锚，同时算出「球 + 面板」的最终位置 ──
+  //   球保持原位作为顶角，面板补到内侧、顶边与球对齐。两者一次性定好，不互相依赖。
+  //   side='right' → 球在右上角，面板在球左侧
+  //   side='left'  → 球在左上角，面板在球右侧
+  function layoutDocked() {
     const fr = fabRect();
-    const top = Math.max(EDGE, Math.min(viewportH() - 120, fr.top));
-    let left: number;
-    if (side === 'right') {
-      left = fr.left - DOCK_GAP - PANEL_WIDTH;       // 面板在悬浮球左侧
-      if (left < EDGE) left = EDGE;
-    } else {
-      left = fr.right + DOCK_GAP;                     // 面板在悬浮球右侧
-      if (left + PANEL_WIDTH > viewportW() - EDGE) left = viewportW() - EDGE - PANEL_WIDTH;
-    }
-    $panel.css({ left: left + 'px', top: top + 'px', right: 'auto' });
-  }
+    // 球的目标位置（先做边界约束）
+    let fabLeft = Math.max(0, Math.min(viewportW() - FAB_SIZE, fr.left));
+    let fabTop = Math.max(EDGE, Math.min(viewportH() - 120, fr.top));
 
-  // ── 把悬浮球贴到面板顶部外侧的角（顶边对齐）──
-  //   side='right' → 球贴在面板右上角外侧
-  //   side='left'  → 球贴在面板左上角外侧
-  function parkFabToPanel() {
-    const pr = ($panel[0] as HTMLElement).getBoundingClientRect();
-    const top = pr.top; // 顶边对齐
-    let left: number;
-    if (side === 'right') left = pr.right + DOCK_GAP;
-    else left = pr.left - DOCK_GAP - FAB_SIZE;
-    // 边界保护
-    left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
-    $fab.css({ left: left + 'px', top: Math.max(0, top) + 'px', right: 'auto' });
+    let panelLeft: number;
+    if (side === 'right') {
+      panelLeft = fabLeft - DOCK_GAP - PANEL_WIDTH;        // 面板在球左侧
+      if (panelLeft < EDGE) {
+        panelLeft = EDGE;
+        fabLeft = panelLeft + PANEL_WIDTH + DOCK_GAP;      // 球随面板右移，保持贴合
+      }
+    } else {
+      panelLeft = fabLeft + FAB_SIZE + DOCK_GAP;           // 面板在球右侧
+      if (panelLeft + PANEL_WIDTH > viewportW() - EDGE) {
+        panelLeft = viewportW() - EDGE - PANEL_WIDTH;
+        fabLeft = panelLeft - DOCK_GAP - FAB_SIZE;         // 球随面板左移
+      }
+    }
+    fabLeft = Math.max(0, Math.min(viewportW() - FAB_SIZE, fabLeft));
+    const panelTop = fabTop; // 顶边对齐
+
+    $fab.css({ left: fabLeft + 'px', top: fabTop + 'px', right: 'auto' });
+    $panel.css({ left: panelLeft + 'px', top: panelTop + 'px', right: 'auto' });
   }
 
   function openPanel() {
-    dockPanel();        // 面板停到悬浮球内侧
-    parkFabToPanel();   // 悬浮球贴到面板顶角外侧（顶边对齐）
-    $panel.addClass('lh-visible');
+    $panel.addClass('lh-visible'); // 先可见，rect 才有效
     panelVisible = true;
+    layoutDocked();                // 一次性定好球和面板位置
     renderCats(); renderBtns(); updateImg();
   }
   function closePanel() {
@@ -299,16 +299,25 @@ $(() => {
   $zoomImg.on('click', (e) => e.stopPropagation()); // 点图片本身不关闭
   $zoomClose.on('click', closeZoom);
 
-  // ── ⚙ 切换：面板不动，只把悬浮球从面板的一个顶角移到另一个顶角 ──
+  // ── ⚙ 切换：面板不动，只把悬浮球从面板的一个顶角移到另一个顶角（带动画）──
+  function moveFabToOtherCorner() {
+    const pr = panelRect();
+    const top = pr.top; // 顶边对齐
+    let left = side === 'right' ? (pr.right + DOCK_GAP) : (pr.left - DOCK_GAP - FAB_SIZE);
+    left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
+    // 加动画类 → 设位置 → 动画结束移除（避免影响拖动）
+    $fab.addClass('lh-anim');
+    $fab.css({ left: left + 'px', top: Math.max(0, top) + 'px', right: 'auto' });
+    setTimeout(() => $fab.removeClass('lh-anim'), 300);
+  }
+
   $gear.on('mousedown', (e) => e.stopPropagation()); // 别触发面板拖动
   $gear.on('click', (e) => {
     e.stopPropagation();
     side = side === 'right' ? 'left' : 'right';
     if (panelVisible) {
-      // 面板保持原位，悬浮球跳到面板的另一个顶角
-      parkFabToPanel();
+      moveFabToOtherCorner(); // 面板不动，球跳到另一顶角
     } else {
-      // 面板没开 → 悬浮球贴到屏幕对应边
       if (side === 'right') $fab.css({ left: 'auto', right: EDGE + 'px' });
       else $fab.css({ right: 'auto', left: EDGE + 'px' });
     }
@@ -338,6 +347,8 @@ $(() => {
 
   function recordStarts(pos: { x: number; y: number }) {
     startX = pos.x; startY = pos.y; moved = false;
+    // 清掉可能残留的切换动画类，保证拖动 100% 跟手无缓动
+    $fab.removeClass('lh-anim'); $panel.removeClass('lh-anim');
     const fr = fabRect(), pr = panelRect();
     fabStartLeft = fr.left; fabStartTop = fr.top;
     panelStartLeft = pr.left; panelStartTop = pr.top;
