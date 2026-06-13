@@ -243,31 +243,25 @@ $(() => {
   }
   function updateImg() { $img.attr('src', item().url).attr('alt', item().name); }
 
-  // ── 以悬浮球当前位置为锚，同时算出「球 + 面板」的最终位置 ──
-  //   球保持原位作为顶角，面板补到内侧、顶边与球对齐。两者一次性定好，不互相依赖。
-  //   side='right' → 球在右上角，面板在球左侧
-  //   side='left'  → 球在左上角，面板在球右侧
+  // ── 算出「球 + 面板」的最终位置 ──
+  //   水平方向完全由 side 决定（确定性，不依赖球的残留 left，避免重开漂移）；
+  //   垂直方向以球当前 top 为锚。两者一次性定好。
+  //   side='right' → 球在右上角(靠右边)，面板在球左侧
+  //   side='left'  → 球在左上角(靠左边)，面板在球右侧
   function layoutDocked() {
     const fr = fabRect();
-    // 球的目标位置（先做边界约束）
-    let fabLeft = Math.max(0, Math.min(viewportW() - FAB_SIZE, fr.left));
-    let fabTop = Math.max(EDGE, Math.min(viewportH() - 120, fr.top));
+    const fabTop = Math.max(EDGE, Math.min(viewportH() - 120, fr.top || EDGE));
 
-    let panelLeft: number;
+    let fabLeft: number, panelLeft: number;
     if (side === 'right') {
+      fabLeft = viewportW() - FAB_SIZE - EDGE;             // 球靠右边
       panelLeft = fabLeft - DOCK_GAP - PANEL_WIDTH;        // 面板在球左侧
-      if (panelLeft < EDGE) {
-        panelLeft = EDGE;
-        fabLeft = panelLeft + PANEL_WIDTH + DOCK_GAP;      // 球随面板右移，保持贴合
-      }
+      if (panelLeft < EDGE) panelLeft = EDGE;
     } else {
+      fabLeft = EDGE;                                      // 球靠左边
       panelLeft = fabLeft + FAB_SIZE + DOCK_GAP;           // 面板在球右侧
-      if (panelLeft + PANEL_WIDTH > viewportW() - EDGE) {
-        panelLeft = viewportW() - EDGE - PANEL_WIDTH;
-        fabLeft = panelLeft - DOCK_GAP - FAB_SIZE;         // 球随面板左移
-      }
+      if (panelLeft + PANEL_WIDTH > viewportW() - EDGE) panelLeft = viewportW() - EDGE - PANEL_WIDTH;
     }
-    fabLeft = Math.max(0, Math.min(viewportW() - FAB_SIZE, fabLeft));
     const panelTop = fabTop; // 顶边对齐
 
     $fab.css({ left: fabLeft + 'px', top: fabTop + 'px', right: 'auto' });
@@ -299,30 +293,31 @@ $(() => {
   $zoomImg.on('click', (e) => e.stopPropagation()); // 点图片本身不关闭
   $zoomClose.on('click', closeZoom);
 
-  // ── ⚙ 切换：面板不动，只把悬浮球从面板的一个顶角移到另一个顶角（带动画）──
-  function moveFabToOtherCorner() {
-    const pr = panelRect();
-    const top = pr.top; // 顶边对齐
-    let left = side === 'right' ? (pr.right + DOCK_GAP) : (pr.left - DOCK_GAP - FAB_SIZE);
-    left = Math.max(0, Math.min(viewportW() - FAB_SIZE, left));
-    // 加动画类 → 设位置 → 动画结束移除（避免影响拖动）
-    $fab.addClass('lh-anim');
-    $fab.css({ left: left + 'px', top: Math.max(0, top) + 'px', right: 'auto' });
-    setTimeout(() => $fab.removeClass('lh-anim'), 300);
-  }
-
+  // ── ⚙ 切换左右侧 ──
   $gear.on('mousedown', (e) => e.stopPropagation()); // 别触发面板拖动
   $gear.on('click', (e) => {
     e.stopPropagation();
     side = side === 'right' ? 'left' : 'right';
+    // 带动画地重排
+    $fab.addClass('lh-anim'); $panel.addClass('lh-anim');
     if (panelVisible) {
-      moveFabToOtherCorner(); // 面板不动，球跳到另一顶角
+      layoutDocked(); // 球+面板按新 side 确定性重排
     } else {
-      if (side === 'right') $fab.css({ left: 'auto', right: EDGE + 'px' });
-      else $fab.css({ right: 'auto', left: EDGE + 'px' });
+      const left = side === 'right' ? (viewportW() - FAB_SIZE - EDGE) : EDGE;
+      const r = fabRect();
+      $fab.css({ left: left + 'px', top: r.top + 'px', right: 'auto' });
     }
-    写位置({ side });
-    toastr.info('悬浮球已移到面板' + (side === 'right' ? '右上角' : '左上角'), '');
+    setTimeout(() => { $fab.removeClass('lh-anim'); $panel.removeClass('lh-anim'); }, 300);
+    // 保存 side + 目标坐标（读 style 设定值，不受动画过渡中间态影响）
+    const save: SavedPos = { side };
+    save.fabLeft = parseFloat($fab.css('left')) || 0;
+    save.fabTop = parseFloat($fab.css('top')) || 0;
+    if (panelVisible) {
+      save.panelLeft = parseFloat($panel.css('left')) || 0;
+      save.panelTop = parseFloat($panel.css('top')) || 0;
+    }
+    写位置(save);
+    toastr.info('悬浮球已切换到' + (side === 'right' ? '右侧' : '左侧'), '');
   });
 
   // ══════════════════════════════════════════════════════════
