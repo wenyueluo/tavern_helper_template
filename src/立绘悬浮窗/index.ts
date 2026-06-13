@@ -1,19 +1,23 @@
 /**
  * 立绘展示悬浮窗 —— 酒馆助手脚本（纯 jQuery 版）
  *
- * 【为什么不用 Vue】
- *   Vue 版依赖 scoped 样式 + teleportStyle() 复制到酒馆 head，
- *   这个链路在某些环境下失效 → 悬浮球不可见。
- *   纯 jQuery 版=样式直接 $('<style>').appendTo('head')+DOM 直接 appendTo('body')，
- *   和已验证可用的简易版一模一样的注入方式，保证 100% 可见。
+ * 【关键教训：不要用 window.innerWidth/innerHeight】
+ *   脚本运行在酒馆的「隐藏后台 iframe」里。$ / getScriptId / getVariables
+ *   被酒馆助手特殊处理 → 指向酒馆主页面；但 window.innerWidth / innerHeight
+ *   仍是这个隐藏 iframe 自己的尺寸（可能是 0），用它算初始位置会把悬浮球
+ *   定位到 left:-62px → 跑到屏幕外 → 看不见！
+ *
+ *   解决：
+ *   1. 初始定位用 CSS（right:16px; top:40%），和已验证可用的简易版一样，保证可见
+ *   2. 拖动时用 getBoundingClientRect() 读元素真实屏幕坐标 + 鼠标 clientX/Y
+ *      （鼠标事件在主 document 触发，坐标是相对主视口的真实值）
+ *   3. 视口尺寸用 viewportW()/viewportH()（读主窗口，带多重回退）
  *
  * 【功能】
- *   1. 可拖动悬浮球（位置持久化到脚本变量）
+ *   1. 可拖动悬浮球（拖动后位置持久化到脚本变量）
  *   2. 可拖动立绘面板（标题栏拖动，位置独立持久化）
- *   3. 面板初始跟随悬浮球；手动拖动后面板独立；关闭再打开重新跟随
- *   4. 5 个分类标签（月岛悠/朝日向七海/月见里雫/橘澪/双人）+ 版本切换按钮
- *   5. 真实立绘 URL（GitHub raw）
- *   6. 窗口缩放时自动约束边界
+ *   3. 面板打开时出现在悬浮球旁；手动拖动后独立；关闭再打开重新跟随
+ *   4. 5 个分类标签 + 版本切换按钮，真实立绘 URL
  */
 
 // ══════════════════════════════════════════════════════════════
@@ -32,18 +36,9 @@ const categories: Category[] = [
       { name: '后期', url: `${ILLUST_BASE}/ma-6.png` },
     ],
   },
-  {
-    name: '朝日向七海',
-    items: [{ name: '日', url: `${ILLUST_BASE}/ma-11.png` }],
-  },
-  {
-    name: '月见里雫',
-    items: [{ name: '雨', url: `${ILLUST_BASE}/ma-9.png` }],
-  },
-  {
-    name: '橘澪',
-    items: [{ name: '橘', url: `${ILLUST_BASE}/ma-10.png` }],
-  },
+  { name: '朝日向七海', items: [{ name: '日', url: `${ILLUST_BASE}/ma-11.png` }] },
+  { name: '月见里雫', items: [{ name: '雨', url: `${ILLUST_BASE}/ma-9.png` }] },
+  { name: '橘澪', items: [{ name: '橘', url: `${ILLUST_BASE}/ma-10.png` }] },
   {
     name: '双人',
     items: [
@@ -64,47 +59,58 @@ const PANEL_MIN_VISIBLE = 80;
 const FAB_SIZE = 46;
 const DRAG_THRESHOLD = 4;
 
+// ── 视口尺寸：脚本 iframe 的 window.innerWidth 不可靠，读主窗口 ──
+function viewportW(): number {
+  let w = 0;
+  try { w = window.parent ? window.parent.innerWidth : 0; } catch { /* 跨域 */ }
+  if (!w) w = window.innerWidth;
+  if (!w) { try { w = window.parent.document.documentElement.clientWidth; } catch { /* ignore */ } }
+  return w || 1280;
+}
+function viewportH(): number {
+  let h = 0;
+  try { h = window.parent ? window.parent.innerHeight : 0; } catch { /* 跨域 */ }
+  if (!h) h = window.innerHeight;
+  if (!h) { try { h = window.parent.document.documentElement.clientHeight; } catch { /* ignore */ } }
+  return h || 720;
+}
+
 // ══════════════════════════════════════════════════════════════
 // 3. 位置持久化（脚本变量）
+//    存的是用户拖动后的真实坐标。首次没有 → 用 CSS 默认定位。
 // ══════════════════════════════════════════════════════════════
-function 读位置() {
-  try {
-    const v = getVariables({ type: 'script' }) as Record<string, any> | undefined;
-    return {
-      fabLeft: v?.fabLeft ?? (window.innerWidth - 62),
-      fabTop: v?.fabTop ?? (window.innerHeight * 0.4),
-      panelLeft: v?.panelLeft ?? Math.max(0, window.innerWidth - 62 - PANEL_WIDTH - 10),
-      panelTop: v?.panelTop ?? Math.max(0, window.innerHeight * 0.4 - 50),
-      panelManuallyPositioned: v?.panelManuallyPositioned ?? false,
-    };
-  } catch { return { fabLeft: window.innerWidth - 62, fabTop: window.innerHeight * 0.4, panelLeft: window.innerWidth - 62 - PANEL_WIDTH - 10, panelTop: window.innerHeight * 0.4 - 50, panelManuallyPositioned: false }; }
+interface SavedPos {
+  fabLeft?: number; fabTop?: number;
+  panelLeft?: number; panelTop?: number;
+  panelManuallyPositioned?: boolean;
 }
-
-// 位置状态（可变）
-const 位置 = 读位置();
-
-function 写位置() {
-  try { insertOrAssignVariables({ fabLeft: 位置.fabLeft, fabTop: 位置.fabTop, panelLeft: 位置.panelLeft, panelTop: 位置.panelTop, panelManuallyPositioned: 位置.panelManuallyPositioned }, { type: 'script' }); } catch { /* ignore */ }
+function 读位置(): SavedPos {
+  try { return (getVariables({ type: 'script' }) as SavedPos) || {}; } catch { return {}; }
+}
+function 写位置(p: SavedPos) {
+  try { insertOrAssignVariables({ ...p }, { type: 'script' }); } catch { /* ignore */ }
 }
 
 // ══════════════════════════════════════════════════════════════
-// 4. 样式（直接注入 head —— 已验证可用）
+// 4. 样式（直接注入 head）
+//    .lh-fab / .lh-panel 默认用 right/top 定位 → 不依赖 innerWidth，必可见
 // ══════════════════════════════════════════════════════════════
 const 样式 = `
 .lh-fab {
-  position:fixed; width:46px; height:46px; border-radius:50%;
+  position:fixed; right:16px; top:40%; width:46px; height:46px; border-radius:50%;
   background:#1b1030; border:1px solid rgba(167,139,250,.4); color:#c4b5fd;
   font-size:22px; display:flex; align-items:center; justify-content:center;
-  cursor:grab; user-select:none; touch-action:none; z-index:999999;
+  cursor:grab; user-select:none; touch-action:none; z-index:2147483646;
   box-shadow:0 0 16px rgba(167,139,250,.35), 0 3px 12px rgba(0,0,0,.5);
   transition:filter .15s, box-shadow .2s;
 }
 .lh-fab:hover { filter:brightness(1.2); box-shadow:0 0 26px rgba(167,139,250,.55); }
 .lh-fab.is-dragging { cursor:grabbing; }
 .lh-panel {
-  position:fixed; width:280px; background:#120c1f;
+  position:fixed; right:16px; top:50%; transform:translateY(-50%);
+  width:280px; background:#120c1f;
   border:1px solid rgba(167,139,250,.3); border-radius:14px;
-  box-shadow:0 10px 40px rgba(0,0,0,.6); z-index:999998;
+  box-shadow:0 10px 40px rgba(0,0,0,.6); z-index:2147483647;
   display:none; flex-direction:column; overflow:hidden; color:#e9e3ff;
   font-family:'Segoe UI',system-ui,sans-serif;
 }
@@ -139,142 +145,98 @@ const 样式 = `
 `;
 
 // ══════════════════════════════════════════════════════════════
-// 5. 构建 DOM
+// 5. 构建
 // ══════════════════════════════════════════════════════════════
 $(() => {
   // ── 注入样式 ──
   $('<style>').attr('script_id', 标记).text(样式).appendTo('head');
 
-  // ── 悬浮球（直接挂 body，已验证的方式）──
+  const saved = 读位置();
+
+  // ── 悬浮球（默认 CSS 定位；有存储坐标才覆盖为 left/top）──
   const $fab = $('<div>')
     .attr('script_id', 标记)
     .addClass('lh-fab')
     .text('🖼') // 🖼
-    .css({ left: 位置.fabLeft + 'px', top: 位置.fabTop + 'px' })
     .appendTo('body');
+  if (typeof saved.fabLeft === 'number' && typeof saved.fabTop === 'number') {
+    $fab.css({ left: saved.fabLeft + 'px', top: saved.fabTop + 'px', right: 'auto' });
+  }
 
   // ── 面板 ──
-  const $panel = $('<div>')
-    .attr('script_id', 标记)
-    .addClass('lh-panel')
-    .css({ left: 位置.panelLeft + 'px', top: 位置.panelTop + 'px' })
-    .appendTo('body');
+  const $panel = $('<div>').attr('script_id', 标记).addClass('lh-panel').appendTo('body');
+  let panelManuallyPositioned = saved.panelManuallyPositioned === true;
+  if (panelManuallyPositioned && typeof saved.panelLeft === 'number' && typeof saved.panelTop === 'number') {
+    $panel.css({ left: saved.panelLeft + 'px', top: saved.panelTop + 'px', right: 'auto', transform: 'none' });
+  }
 
   // 标题栏
   const $head = $('<div>').addClass('lh-head').appendTo($panel);
   $('<span>').text('立绘展示').appendTo($head);
   const $close = $('<span>').addClass('lh-close').text('✕').appendTo($head); // ✕
 
-  // 分类标签
   const $cats = $('<div>').addClass('lh-categories').appendTo($panel);
-
-  // 大图
   const $imgWrap = $('<div>').addClass('lh-img-wrap').appendTo($panel);
   const $img = $('<img>').addClass('lh-img').appendTo($imgWrap);
-
-  // 版本按钮
   const $btns = $('<div>').addClass('lh-btns').appendTo($panel);
 
-  // ══════════════════════════════════════════════════════════
-  // 6. 状态
-  // ══════════════════════════════════════════════════════════
-  let catIdx = 0;
-  let itemIdx = 0;
-  let panelVisible = false;
+  // ── 状态 ──
+  let catIdx = 0, itemIdx = 0, panelVisible = false;
+  const cat = () => categories[catIdx];
+  const item = () => cat().items[itemIdx];
 
-  function currentCat() { return categories[catIdx]; }
-  function currentItem() { return currentCat().items[itemIdx]; }
-
-  // ══════════════════════════════════════════════════════════
-  // 7. 渲染分类标签
-  // ══════════════════════════════════════════════════════════
   function renderCats() {
     $cats.empty();
-    categories.forEach((cat, i) => {
-      $('<div>')
-        .addClass('lh-cat-tab')
-        .toggleClass('active', i === catIdx)
-        .text(cat.name)
-        .on('click', () => switchCat(i))
-        .appendTo($cats);
+    categories.forEach((c, i) => {
+      $('<div>').addClass('lh-cat-tab').toggleClass('active', i === catIdx)
+        .text(c.name).on('click', () => switchCat(i)).appendTo($cats);
     });
   }
-
   function switchCat(idx: number) {
     if (idx === catIdx) return;
-    catIdx = idx;
-    itemIdx = 0;
-    renderCats();
-    renderBtns();
-    updateImg();
+    catIdx = idx; itemIdx = 0;
+    renderCats(); renderBtns(); updateImg();
   }
-
-  // ══════════════════════════════════════════════════════════
-  // 8. 渲染版本按钮 + 更新图片
-  // ══════════════════════════════════════════════════════════
   function renderBtns() {
     $btns.empty();
-    currentCat().items.forEach((item, i) => {
-      $('<div>')
-        .addClass('lh-btn')
-        .toggleClass('active', i === itemIdx)
-        .text(item.name)
-        .on('click', () => { itemIdx = i; renderBtns(); updateImg(); })
-        .appendTo($btns);
+    cat().items.forEach((it, i) => {
+      $('<div>').addClass('lh-btn').toggleClass('active', i === itemIdx)
+        .text(it.name).on('click', () => { itemIdx = i; renderBtns(); updateImg(); }).appendTo($btns);
     });
   }
+  function updateImg() { $img.attr('src', item().url).attr('alt', item().name); }
 
-  function updateImg() {
-    $img.attr('src', currentItem().url).attr('alt', currentItem().name);
+  // ── 面板跟随悬浮球：基于 fab 的真实屏幕坐标 ──
+  function fabRect() { return ($fab[0] as HTMLElement).getBoundingClientRect(); }
+  function followFab() {
+    const r = fabRect();
+    let left = r.left - PANEL_WIDTH - 10;
+    if (left < 0) left = r.right + 10;                       // 左侧放不下→放右侧
+    if (left + PANEL_WIDTH > viewportW()) left = Math.max(10, viewportW() - PANEL_WIDTH - 10);
+    let top = r.top - 40;
+    if (top < 10) top = 10;
+    if (top + PANEL_MIN_VISIBLE > viewportH()) top = viewportH() - PANEL_MIN_VISIBLE - 10;
+    $panel.css({ left: left + 'px', top: top + 'px', right: 'auto', transform: 'none' });
   }
 
-  // ══════════════════════════════════════════════════════════
-  // 9. 面板初始位置计算（跟随悬浮球）
-  // ══════════════════════════════════════════════════════════
-  function computePanelLeft(): number {
-    let left = 位置.fabLeft - PANEL_WIDTH - 10;
-    if (left < 0) left = 10;
-    if (left + PANEL_WIDTH > window.innerWidth) left = window.innerWidth - PANEL_WIDTH - 10;
-    return left;
-  }
-  function computePanelTop(): number {
-    let top = 位置.fabTop - 50;
-    if (top < 0) top = 10;
-    if (top + PANEL_MIN_VISIBLE > window.innerHeight) top = window.innerHeight - PANEL_MIN_VISIBLE - 10;
-    return top;
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // 10. 打开/关闭面板
-  // ══════════════════════════════════════════════════════════
   function openPanel() {
-    if (!位置.panelManuallyPositioned) {
-      位置.panelLeft = computePanelLeft();
-      位置.panelTop = computePanelTop();
-      $panel.css({ left: 位置.panelLeft + 'px', top: 位置.panelTop + 'px' });
-    }
+    if (!panelManuallyPositioned) followFab();
     $panel.addClass('lh-visible');
     panelVisible = true;
-    renderCats();
-    renderBtns();
-    updateImg();
-    写位置();
+    renderCats(); renderBtns(); updateImg();
   }
-
   function closePanel() {
     $panel.removeClass('lh-visible');
     panelVisible = false;
-    位置.panelManuallyPositioned = false;
-    写位置();
+    panelManuallyPositioned = false;
+    写位置({ panelManuallyPositioned: false });
   }
 
   // ══════════════════════════════════════════════════════════
-  // 11. 拖动逻辑（共享：悬浮球 + 面板标题栏）
+  // 6. 拖动（悬浮球 + 面板标题栏）—— 全部基于 getBoundingClientRect
   // ══════════════════════════════════════════════════════════
   let dragTarget: 'fab' | 'panel' | null = null;
-  let dragStartX = 0, dragStartY = 0;
-  let dragStartLeft = 0, dragStartTop = 0;
-  let hasMoved = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0, moved = false;
 
   function getXY(e: JQuery.TriggeredEvent): { x: number; y: number } | null {
     const oe = e.originalEvent;
@@ -285,112 +247,90 @@ $(() => {
     return { x: (oe as MouseEvent).clientX, y: (oe as MouseEvent).clientY };
   }
 
-  function onFabDown(e: JQuery.TriggeredEvent) {
-    dragTarget = 'fab';
-    hasMoved = false;
-    const pos = getXY(e);
-    if (!pos) return;
-    dragStartX = pos.x; dragStartY = pos.y;
-    dragStartLeft = 位置.fabLeft; dragStartTop = 位置.fabTop;
+  $fab.on('mousedown touchstart', (e) => {
+    const pos = getXY(e); if (!pos) return;
+    dragTarget = 'fab'; moved = false;
+    const r = fabRect();
+    startX = pos.x; startY = pos.y; startLeft = r.left; startTop = r.top;
     $fab.addClass('is-dragging');
     e.preventDefault();
-  }
+  });
 
-  function onPanelDown(e: JQuery.TriggeredEvent) {
-    dragTarget = 'panel';
-    hasMoved = false;
-    const pos = getXY(e);
-    if (!pos) return;
-    dragStartX = pos.x; dragStartY = pos.y;
-    dragStartLeft = 位置.panelLeft; dragStartTop = 位置.panelTop;
-    // 面板开始拖动即断开跟随（在 dragStart 就设，防 watcher 覆盖）
-    位置.panelManuallyPositioned = true;
-    $head.addClass('is-dragging');
-    $panel.addClass('lh-panel-dragging');
+  $head.on('mousedown touchstart', (e) => {
+    const pos = getXY(e); if (!pos) return;
+    dragTarget = 'panel'; moved = false;
+    const r = ($panel[0] as HTMLElement).getBoundingClientRect();
+    startX = pos.x; startY = pos.y; startLeft = r.left; startTop = r.top;
+    panelManuallyPositioned = true; // 拖动即断开跟随
+    $head.addClass('is-dragging'); $panel.addClass('lh-panel-dragging');
     e.preventDefault();
-  }
+  });
 
-  function onDragMove(e: JQuery.TriggeredEvent) {
+  $close.on('mousedown', (e) => e.stopPropagation());
+  $close.on('click', () => closePanel());
+
+  $(document).on('mousemove.lh touchmove.lh', (e) => {
     if (!dragTarget) return;
-    const pos = getXY(e);
-    if (!pos) return;
-    const dx = pos.x - dragStartX;
-    const dy = pos.y - dragStartY;
-    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) hasMoved = true;
+    const pos = getXY(e); if (!pos) return;
+    const dx = pos.x - startX, dy = pos.y - startY;
+    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) moved = true;
 
     if (dragTarget === 'fab') {
-      位置.fabLeft = Math.max(0, Math.min(window.innerWidth - FAB_SIZE, dragStartLeft + dx));
-      位置.fabTop = Math.max(0, Math.min(window.innerHeight - FAB_SIZE, dragStartTop + dy));
-      $fab.css({ left: 位置.fabLeft + 'px', top: 位置.fabTop + 'px' });
-      // 面板跟随悬浮球
-      if (panelVisible && !位置.panelManuallyPositioned) {
-        位置.panelLeft = computePanelLeft();
-        位置.panelTop = computePanelTop();
-        $panel.css({ left: 位置.panelLeft + 'px', top: 位置.panelTop + 'px' });
-      }
-    } else if (dragTarget === 'panel') {
-      位置.panelLeft = Math.max(-PANEL_WIDTH + PANEL_MIN_VISIBLE, Math.min(window.innerWidth - PANEL_MIN_VISIBLE, dragStartLeft + dx));
-      位置.panelTop = Math.max(0, Math.min(window.innerHeight - PANEL_MIN_VISIBLE, dragStartTop + dy));
-      $panel.css({ left: 位置.panelLeft + 'px', top: 位置.panelTop + 'px' });
+      const left = Math.max(0, Math.min(viewportW() - FAB_SIZE, startLeft + dx));
+      const top = Math.max(0, Math.min(viewportH() - FAB_SIZE, startTop + dy));
+      $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
+      if (panelVisible && !panelManuallyPositioned) followFab();
+    } else {
+      const left = Math.max(-PANEL_WIDTH + PANEL_MIN_VISIBLE, Math.min(viewportW() - PANEL_MIN_VISIBLE, startLeft + dx));
+      const top = Math.max(0, Math.min(viewportH() - PANEL_MIN_VISIBLE, startTop + dy));
+      $panel.css({ left: left + 'px', top: top + 'px', right: 'auto', transform: 'none' });
     }
-  }
+  });
 
-  function onDragEnd() {
+  $(document).on('mouseup.lh touchend.lh', () => {
     if (!dragTarget) return;
     if (dragTarget === 'fab') {
       $fab.removeClass('is-dragging');
-      if (!hasMoved) {
-        // 点击 → 切换面板
+      if (!moved) {
         panelVisible ? closePanel() : openPanel();
+      } else {
+        const r = fabRect();
+        写位置({ fabLeft: r.left, fabTop: r.top });
       }
-    } else if (dragTarget === 'panel') {
-      $head.removeClass('is-dragging');
-      $panel.removeClass('lh-panel-dragging');
+    } else {
+      $head.removeClass('is-dragging'); $panel.removeClass('lh-panel-dragging');
+      const r = ($panel[0] as HTMLElement).getBoundingClientRect();
+      写位置({ panelLeft: r.left, panelTop: r.top, panelManuallyPositioned: true });
     }
     dragTarget = null;
-    写位置();
-  }
-
-  $fab.on('mousedown touchstart', onFabDown);
-  $head.on('mousedown touchstart', onPanelDown);
-  $close.on('mousedown', (e: JQuery.TriggeredEvent) => { e.stopPropagation(); });
-  $close.on('click', () => closePanel());
-  $(document).on('mousemove.lh touchmove.lh', onDragMove);
-  $(document).on('mouseup.lh touchend.lh', onDragEnd);
-
-  // ══════════════════════════════════════════════════════════
-  // 12. 窗口缩放 → 约束边界
-  // ══════════════════════════════════════════════════════════
-  $(window).on('resize.lh', () => {
-    位置.fabLeft = Math.max(0, Math.min(window.innerWidth - FAB_SIZE, 位置.fabLeft));
-    位置.fabTop = Math.max(0, Math.min(window.innerHeight - FAB_SIZE, 位置.fabTop));
-    $fab.css({ left: 位置.fabLeft + 'px', top: 位置.fabTop + 'px' });
-    if (panelVisible) {
-      if (!位置.panelManuallyPositioned) {
-        位置.panelLeft = computePanelLeft();
-        位置.panelTop = computePanelTop();
-      } else {
-        位置.panelLeft = Math.max(0, Math.min(window.innerWidth - PANEL_WIDTH, 位置.panelLeft));
-        位置.panelTop = Math.max(0, Math.min(window.innerHeight - PANEL_MIN_VISIBLE, 位置.panelTop));
-      }
-      $panel.css({ left: 位置.panelLeft + 'px', top: 位置.panelTop + 'px' });
-    }
-    写位置();
   });
 
-  // ══════════════════════════════════════════════════════════
-  // 13. 初始化
-  // ══════════════════════════════════════════════════════════
-  console.log('[立绘悬浮窗] 已加载 jQuery版, 脚本ID:', 标记,
-    '位置:', 位置.fabLeft + ',' + 位置.fabTop,
-    '窗口:', window.innerWidth + 'x' + window.innerHeight);
-  toastr.success('立绘悬浮窗已加载，点击🖼展开', '');
+  // ── 窗口缩放：把元素拉回视口内 ──
+  $(window).on('resize.lh', () => {
+    const r = fabRect();
+    const left = Math.max(0, Math.min(viewportW() - FAB_SIZE, r.left));
+    const top = Math.max(0, Math.min(viewportH() - FAB_SIZE, r.top));
+    $fab.css({ left: left + 'px', top: top + 'px', right: 'auto' });
+    if (panelVisible) {
+      if (!panelManuallyPositioned) followFab();
+      else {
+        const pr = ($panel[0] as HTMLElement).getBoundingClientRect();
+        $panel.css({
+          left: Math.max(0, Math.min(viewportW() - PANEL_WIDTH, pr.left)) + 'px',
+          top: Math.max(0, Math.min(viewportH() - PANEL_MIN_VISIBLE, pr.top)) + 'px',
+          right: 'auto', transform: 'none',
+        });
+      }
+    }
+  });
 
-  // ══════════════════════════════════════════════════════════
-  // 14. 卸载
-  // ══════════════════════════════════════════════════════════
+  console.log('[立绘悬浮窗] jQuery版已挂载, ID:', 标记,
+    'iframe视口:', window.innerWidth + 'x' + window.innerHeight,
+    '主视口:', viewportW() + 'x' + viewportH());
+  toastr.success('立绘悬浮窗已加载，点击右侧🖼展开', '');
+
+  // ── 卸载 ──
   $(window).on('pagehide', () => {
-    写位置();
     $(`[script_id="${标记}"]`).remove();
     $(document).off('.lh');
     $(window).off('.lh');
