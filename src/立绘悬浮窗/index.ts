@@ -152,18 +152,25 @@ const 样式 = `
 .lh-fab.is-dragging *, .lh-panel-dragging * { user-select:none; }
 /* ── 全屏放大遮罩 ── */
 .lh-zoom { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:2147483647;
-  display:none; align-items:center; justify-content:center; cursor:zoom-out;
-  padding:24px; box-sizing:border-box; backdrop-filter:blur(2px); }
+  display:none; align-items:center; justify-content:center;
+  overflow:hidden; box-sizing:border-box; backdrop-filter:blur(2px); }
 .lh-zoom.lh-zoom-show { display:flex; }
-.lh-zoom img { max-width:96%; max-height:96%; object-fit:contain; border-radius:8px;
-  box-shadow:0 0 60px rgba(167,139,250,.3), 0 0 30px rgba(0,0,0,.8); }
+.lh-zoom img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px;
+  box-shadow:0 0 60px rgba(167,139,250,.3), 0 0 30px rgba(0,0,0,.8);
+  transform-origin:center center; cursor:zoom-in; user-select:none;
+  -webkit-user-drag:none; will-change:transform; touch-action:none; }
+.lh-zoom img.lh-zoom-grab { cursor:grab; }
+.lh-zoom img.lh-zoom-grabbing { cursor:grabbing; }
 .lh-zoom-close { position:absolute; top:18px; right:24px; width:40px; height:40px;
   line-height:38px; text-align:center; font-size:22px; color:#e9e3ff; cursor:pointer;
-  border:1px solid rgba(167,139,250,.4); border-radius:50%; background:rgba(18,12,31,.6); }
+  border:1px solid rgba(167,139,250,.4); border-radius:50%; background:rgba(18,12,31,.6); z-index:2; }
 .lh-zoom-close:hover { background:rgba(167,139,250,.25); }
 .lh-zoom-cap { position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
   color:#c4b5fd; font-size:13px; letter-spacing:1px; background:rgba(18,12,31,.7);
-  padding:4px 16px; border-radius:14px; }
+  padding:4px 16px; border-radius:14px; z-index:2; }
+.lh-zoom-tip { position:absolute; top:18px; left:24px;
+  color:#8a7fb5; font-size:11px; letter-spacing:.5px; background:rgba(18,12,31,.6);
+  padding:4px 12px; border-radius:12px; z-index:2; pointer-events:none; }
 `;
 
 // ══════════════════════════════════════════════════════════════
@@ -216,6 +223,7 @@ $(() => {
   const $zoomClose = $('<span>').addClass('lh-zoom-close').text('✕').appendTo($zoom);
   const $zoomImg = $('<img>').appendTo($zoom);
   const $zoomCap = $('<div>').addClass('lh-zoom-cap').appendTo($zoom);
+  $('<div>').addClass('lh-zoom-tip').text('滚轮缩放 · 拖动平移 · 双击复位').appendTo($zoom);
 
   // ── 状态 ──
   let catIdx = 0, itemIdx = 0, panelVisible = false;
@@ -281,17 +289,60 @@ $(() => {
     写位置({ panelManuallyPositioned: false });
   }
 
-  // ── 放大查看 ──
+  // ── 放大查看（滚轮缩放 + 拖动平移 + 双击复位）──
+  let zScale = 1, zX = 0, zY = 0;            // 当前缩放/平移
+  const Z_MIN = 1, Z_MAX = 6;
+  function applyZoom() {
+    (($zoomImg[0] as HTMLElement)).style.transform =
+      `translate(${zX}px, ${zY}px) scale(${zScale})`;
+    $zoomImg.toggleClass('lh-zoom-grab', zScale > 1);
+  }
+  function resetZoom() { zScale = 1; zX = 0; zY = 0; applyZoom(); }
+
   function openZoom() {
     $zoomImg.attr('src', item().url).attr('alt', item().name);
     $zoomCap.text(cat().name + ' · ' + item().name);
+    resetZoom();
     $zoom.addClass('lh-zoom-show');
   }
   function closeZoom() { $zoom.removeClass('lh-zoom-show'); }
   $imgWrap.on('click', openZoom);
-  $zoom.on('click', closeZoom); // 点遮罩任意处关闭
-  $zoomImg.on('click', (e) => e.stopPropagation()); // 点图片本身不关闭
+  $zoom.on('click', closeZoom);                       // 点遮罩空白处关闭
+  $zoomImg.on('click', (e) => e.stopPropagation());   // 点图片本身不关闭
   $zoomClose.on('click', closeZoom);
+
+  // 滚轮缩放（以鼠标位置为中心）
+  $zoomImg.on('wheel', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const oe = e.originalEvent as WheelEvent;
+    const rect = ($zoomImg[0] as HTMLElement).getBoundingClientRect();
+    // 鼠标相对图片中心的偏移（缩放前）
+    const cx = oe.clientX - (rect.left + rect.width / 2);
+    const cy = oe.clientY - (rect.top + rect.height / 2);
+    const prev = zScale;
+    const factor = oe.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zScale = Math.max(Z_MIN, Math.min(Z_MAX, zScale * factor));
+    const ratio = zScale / prev;
+    // 让鼠标指向的点保持不动
+    zX = (zX - cx) * ratio + cx;
+    zY = (zY - cy) * ratio + cy;
+    if (zScale === 1) { zX = 0; zY = 0; }
+    applyZoom();
+  });
+
+  // 拖动平移（放大后）
+  let zDragging = false, zSX = 0, zSY = 0, zOX = 0, zOY = 0;
+  $zoomImg.on('mousedown touchstart', (e) => {
+    if (zScale <= 1) return;
+    const oe = e.originalEvent as MouseEvent | TouchEvent;
+    const p = oe instanceof TouchEvent ? (oe.touches[0] ?? oe.changedTouches[0]) : oe;
+    if (!p) return;
+    zDragging = true; zSX = p.clientX; zSY = p.clientY; zOX = zX; zOY = zY;
+    $zoomImg.addClass('lh-zoom-grabbing');
+    e.preventDefault(); e.stopPropagation();
+  });
+  // 双击复位
+  $zoomImg.on('dblclick', (e) => { e.stopPropagation(); resetZoom(); });
 
   // ── ⚙ 切换左右侧 ──
   $gear.on('mousedown', (e) => e.stopPropagation()); // 别触发面板拖动
@@ -370,6 +421,23 @@ $(() => {
   const ownerWin = ownerDoc.defaultView || window;
   const $doc = $(ownerDoc);
   const $win = $(ownerWin);
+
+  // ── 放大图的拖动平移（全局 move/up）──
+  $doc.on('mousemove.lhzoom touchmove.lhzoom', (e) => {
+    if (!zDragging) return;
+    const oe = e.originalEvent as MouseEvent | TouchEvent;
+    const p = oe instanceof TouchEvent ? (oe.touches[0] ?? oe.changedTouches[0]) : oe;
+    if (!p) return;
+    zX = zOX + (p.clientX - zSX);
+    zY = zOY + (p.clientY - zSY);
+    applyZoom();
+    e.preventDefault();
+  });
+  $doc.on('mouseup.lhzoom touchend.lhzoom', () => {
+    if (!zDragging) return;
+    zDragging = false;
+    $zoomImg.removeClass('lh-zoom-grabbing');
+  });
 
   $doc.on('mousemove.lh touchmove.lh', (e) => {
     if (!dragTarget) return;
@@ -455,7 +523,7 @@ $(() => {
   // ── 卸载 ──
   $(window).on('pagehide', () => {
     $(`[script_id="${标记}"]`).remove();
-    $doc.off('.lh');
+    $doc.off('.lh'); $doc.off('.lhzoom');
     $win.off('.lh');
   });
 });
