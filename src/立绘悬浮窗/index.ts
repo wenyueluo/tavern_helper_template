@@ -16,29 +16,46 @@
 // ══════════════════════════════════════════════════════════════
 // 1. 立绘数据
 // ══════════════════════════════════════════════════════════════
-const ILLUST_BASE = 'https://raw.githubusercontent.com/wenyueluo/sillytraven/main/yyryjyy';
+const ILLUST_BASE = 'https://raw.githubusercontent.com/wenyueluo/sillytraven/main/沉鸢不归';
 
 interface Illustration { name: string; url: string }
 interface Category { name: string; items: Illustration[] }
 
 const categories: Category[] = [
   {
-    name: '月岛悠',
+    name: '沈鸢',
     items: [
-      { name: '颓废期', url: `${ILLUST_BASE}/ma-5.png` },
-      { name: '后期', url: `${ILLUST_BASE}/ma-6.png` },
+      { name: '沈鸢-1', url: `${ILLUST_BASE}/沈鸢-1.png` },
+      { name: '沈鸢-2', url: `${ILLUST_BASE}/沈鸢-2.png` },
+      { name: '沈鸢-3', url: `${ILLUST_BASE}/沈鸢-3.png` },
+      { name: '沈鸢-4', url: `${ILLUST_BASE}/沈鸢-4.png` },
+      { name: '沈鸢-5', url: `${ILLUST_BASE}/沈鸢-5.png` },
+      { name: '沈鸢-6', url: `${ILLUST_BASE}/沈鸢-6.png` },
+      { name: '沈鸢-7', url: `${ILLUST_BASE}/沈鸢-7.png` },
     ],
   },
-  { name: '朝日向七海', items: [{ name: '日', url: `${ILLUST_BASE}/ma-11.png` }] },
-  { name: '月见里雫', items: [{ name: '雨', url: `${ILLUST_BASE}/ma-9.png` }] },
-  { name: '橘澪', items: [{ name: '橘', url: `${ILLUST_BASE}/ma-10.png` }] },
+  { name: '乔晚', items: [{ name: '乔晚-1', url: `${ILLUST_BASE}/乔晚-1.png` }] },
+  { name: '凌千夏', items: [{ name: '凌千夏-1', url: `${ILLUST_BASE}/凌千夏-1.png` }] },
+  { name: '姜野', items: [{ name: '姜野-1', url: `${ILLUST_BASE}/姜野-1.png` }] },
+  { name: '安樱', items: [{ name: '安樱-1', url: `${ILLUST_BASE}/安樱-1.png` }] },
+  { name: '宋薄寒', items: [{ name: '宋薄寒-1', url: `${ILLUST_BASE}/宋薄寒-1.png` }] },
+  { name: '时染', items: [{ name: '时染-1', url: `${ILLUST_BASE}/时染-1.png` }] },
+  { name: '苏小眠', items: [{ name: '苏小眠-1', url: `${ILLUST_BASE}/苏小眠-1.png` }] },
+  { name: '裴寒露', items: [{ name: '裴寒露-1', url: `${ILLUST_BASE}/裴寒露-1.png` }] },
+  { name: '闻浅', items: [{ name: '闻浅-1', url: `${ILLUST_BASE}/闻浅-1.png` }] },
+  { name: '颜絮', items: [{ name: '颜絮-1', url: `${ILLUST_BASE}/颜絮-1.png` }] },
   {
-    name: '双人',
+    name: 'NTR游戏',
     items: [
-      { name: '月岛悠×朝日向七海', url: `${ILLUST_BASE}/ma-12.png` },
-      { name: '月岛悠×月见里雫', url: `${ILLUST_BASE}/ma-17.png` },
-      { name: '月岛悠×橘澪①', url: `${ILLUST_BASE}/ma-16.png` },
-      { name: '月岛悠×橘澪②', url: `${ILLUST_BASE}/ma-18.png` },
+      { name: 'NTR游戏-1', url: `${ILLUST_BASE}/ntr游戏-1.png` },
+      { name: 'NTR游戏-2', url: `${ILLUST_BASE}/ntr游戏-2.png` },
+    ],
+  },
+  {
+    name: '玩偶服隐奸',
+    items: [
+      { name: '玩偶服隐奸-1', url: `${ILLUST_BASE}/玩偶服隐奸-1.png` },
+      { name: '玩偶服隐奸-2', url: `${ILLUST_BASE}/玩偶服隐奸-2.png` },
     ],
   },
 ];
