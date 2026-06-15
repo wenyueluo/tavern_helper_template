@@ -3,69 +3,81 @@
  *
  * 角色：
  * 苏怀瑾 / 许念棠 / 方晴 / 苏念瑶 / 白软软 / 唐果 / 许疏影 / 楚清音
- * CDN 路径：https://testingcf.jsdelivr.net/gh/wenyueluo/tavern_helper_template@master/dist/棉花糖
+ * CDN 路径：https://testingcf.jsdelivr.net/gh/wenyueluo/sillytraven@main/棉花糖
  */
 
 // ============================================================
 // 1. 立绘数据
 // ============================================================
-const ILLUST_BASE = 'https://testingcf.jsdelivr.net/gh/wenyueluo/tavern_helper_template@master/dist/%E6%A3%89%E8%8A%B1%E7%B3%96';
+const ILLUST_BASE = 'https://testingcf.jsdelivr.net/gh/wenyueluo/sillytraven@main/%E6%A3%89%E8%8A%B1%E7%B3%96';
 
 const categories = [
   {
     name: '苏怀瑾',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/苏怀瑾_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/苏怀瑾_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/苏怀瑾-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/苏怀瑾-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/苏怀瑾-3.png' },
+      { name: '立绘肆', url: ILLUST_BASE + '/苏怀瑾-4.png' },
     ],
   },
   {
     name: '许念棠',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/许念棠_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/许念棠_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/许念棠-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/许念棠-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/许念棠-3.png' },
     ],
   },
   {
     name: '方晴',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/方晴_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/方晴_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/方晴-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/方晴-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/方晴-3.png' },
     ],
   },
   {
     name: '苏念瑶',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/苏念瑶_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/苏念瑶_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/苏念瑶-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/苏念瑶-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/苏念瑶-3.png' },
     ],
   },
   {
     name: '白软软',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/白软软_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/白软软_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/白软软-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/白软软-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/白软软-3.png' },
+      { name: '立绘肆', url: ILLUST_BASE + '/白软软-4.png' },
+      { name: '立绘伍', url: ILLUST_BASE + '/白软软-5.png' },
+      { name: '立绘陆', url: ILLUST_BASE + '/白软软-6.png' },
     ],
   },
   {
     name: '唐果',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/唐果_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/唐果_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/唐果-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/唐果-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/唐果-3.png' },
     ],
   },
   {
     name: '许疏影',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/许疏影_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/许疏影_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/许疏影-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/许疏影-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/许疏影-3.png' },
     ],
   },
   {
     name: '楚清音',
     items: [
-      { name: '日常壹', url: ILLUST_BASE + '/楚清音_1.png' },
-      { name: '日常贰', url: ILLUST_BASE + '/楚清音_2.png' },
+      { name: '立绘壹', url: ILLUST_BASE + '/楚清音-1.png' },
+      { name: '立绘贰', url: ILLUST_BASE + '/楚清音-2.png' },
+      { name: '立绘叁', url: ILLUST_BASE + '/楚清音-3.png' },
     ],
   },
 ];
