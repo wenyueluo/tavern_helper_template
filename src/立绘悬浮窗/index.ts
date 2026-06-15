@@ -67,6 +67,10 @@ const 标记 = getScriptId();
 const PANEL_WIDTH = 280;
 const FAB_SIZE = 46;
 const DRAG_THRESHOLD = 4;
+const PANEL_MIN_W = 200;   // 面板最小宽
+const PANEL_MIN_H = 240;   // 面板最小高
+const PANEL_MAX_W = 720;   // 面板最大宽
+const PANEL_MAX_H = 960;   // 面板最大高
 
 function viewportW(): number {
   let w = 0;
@@ -89,6 +93,7 @@ function viewportH(): number {
 interface SavedPos {
   fabLeft?: number; fabTop?: number;
   panelLeft?: number; panelTop?: number;
+  panelW?: number; panelH?: number;
 }
 function 读位置(): SavedPos {
   try { return (getVariables({ type: 'script' }) as SavedPos) || {}; } catch { return {}; }
@@ -120,6 +125,20 @@ const 样式 = `
   font-family:'Segoe UI',system-ui,sans-serif;
 }
 .lh-panel.lh-visible { display:flex; }
+.lh-panel.lh-resizing { user-select:none; }
+/* ── 八向拉伸把手 ── */
+.lh-rz { position:absolute; z-index:5; touch-action:none; }
+.lh-rz-n  { top:-4px; left:8px; right:8px; height:8px; cursor:ns-resize; }
+.lh-rz-s  { bottom:-4px; left:8px; right:8px; height:8px; cursor:ns-resize; }
+.lh-rz-w  { left:-4px; top:8px; bottom:8px; width:8px; cursor:ew-resize; }
+.lh-rz-e  { right:-4px; top:8px; bottom:8px; width:8px; cursor:ew-resize; }
+.lh-rz-nw { top:-4px; left:-4px; width:14px; height:14px; cursor:nwse-resize; }
+.lh-rz-ne { top:-4px; right:-4px; width:14px; height:14px; cursor:nesw-resize; }
+.lh-rz-sw { bottom:-4px; left:-4px; width:14px; height:14px; cursor:nesw-resize; }
+.lh-rz-se { bottom:-4px; right:-4px; width:14px; height:14px; cursor:nwse-resize; }
+/* 右下角视觉提示纹 */
+.lh-rz-se::after { content:''; position:absolute; right:3px; bottom:3px; width:7px; height:7px;
+  border-right:2px solid rgba(167,139,250,.5); border-bottom:2px solid rgba(167,139,250,.5); }
 .lh-head {
   display:flex; align-items:center; justify-content:space-between; gap:6px;
   padding:8px 12px; font-size:13px;
@@ -137,7 +156,7 @@ const 样式 = `
   color:rgba(255,255,255,.5); transition:background .15s, color .15s; }
 .lh-cat-tab:hover { color:#c4b5fd; background:rgba(167,139,250,.1); }
 .lh-cat-tab.active { color:#e9e3ff; background:rgba(167,139,250,.15); font-weight:600; }
-.lh-img-wrap { width:100%; aspect-ratio:2/3; background:#0a0712;
+.lh-img-wrap { width:100%; flex:1 1 auto; min-height:120px; background:#0a0712;
   display:flex; align-items:center; justify-content:center; overflow:hidden;
   cursor:zoom-in; position:relative; }
 .lh-img-wrap::after { content:'🔍 点击放大'; position:absolute; bottom:8px; right:8px;
@@ -212,6 +231,13 @@ $(() => {
   } else if (saved.panelLeft !== undefined) {
     写位置({ panelLeft: undefined, panelTop: undefined });
   }
+  // ── 面板尺寸：恢复存储的宽高（带范围校验）──
+  if (typeof saved.panelW === 'number' && isFinite(saved.panelW)) {
+    $panel.css('width', Math.max(PANEL_MIN_W, Math.min(PANEL_MAX_W, saved.panelW)) + 'px');
+  }
+  if (typeof saved.panelH === 'number' && isFinite(saved.panelH)) {
+    $panel.css('height', Math.max(PANEL_MIN_H, Math.min(PANEL_MAX_H, saved.panelH)) + 'px');
+  }
 
   // 标题栏：标题 + [✕关闭]（没有 ⚙ 切换按钮）
   const $head = $('<div>').addClass('lh-head').appendTo($panel);
@@ -222,6 +248,12 @@ $(() => {
   const $imgWrap = $('<div>').addClass('lh-img-wrap').appendTo($panel);
   const $img = $('<img>').addClass('lh-img').appendTo($imgWrap);
   const $btns = $('<div>').addClass('lh-btns').appendTo($panel);
+
+  // ── 八向拉伸把手（N/S/W/E + 四角）──
+  const RZ_DIRS = ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se'] as const;
+  RZ_DIRS.forEach((d) => {
+    $('<div>').addClass('lh-rz lh-rz-' + d).attr('data-rz', d).appendTo($panel);
+  });
 
   // ── 全屏放大遮罩 ──
   const $zoom = $('<div>').attr('script_id', 标记).addClass('lh-zoom').appendTo('body');
@@ -411,6 +443,59 @@ $(() => {
     dragTarget = null;
   });
 
+  // ══════════════════════════════════════════════════════════
+  // 7.5 面板四边/四角拉伸 —— 改变尺寸，拖动结束存宽高
+  // ══════════════════════════════════════════════════════════
+  let rzDir: string | null = null;
+  let rzSX = 0, rzSY = 0, rzSL = 0, rzST = 0, rzSW = 0, rzSH = 0;
+
+  $panel.on('mousedown touchstart', '.lh-rz', (e) => {
+    const pos = getXY(e); if (!pos) return;
+    rzDir = String($(e.currentTarget).attr('data-rz') || '');
+    const r = rectOf($panel);
+    rzSX = pos.x; rzSY = pos.y;
+    rzSL = r.left; rzST = r.top; rzSW = r.width; rzSH = r.height;
+    $panel.addClass('lh-resizing');
+    e.preventDefault(); e.stopPropagation();
+  });
+
+  $doc.on('mousemove.lhrz touchmove.lhrz', (e) => {
+    if (!rzDir) return;
+    const pos = getXY(e); if (!pos) return;
+    const dx = pos.x - rzSX, dy = pos.y - rzSY;
+    let newL = rzSL, newT = rzST, newW = rzSW, newH = rzSH;
+
+    // 东/西：改宽（西边同时移动 left）
+    if (rzDir.indexOf('e') !== -1) {
+      newW = Math.max(PANEL_MIN_W, Math.min(PANEL_MAX_W, rzSW + dx));
+    }
+    if (rzDir.indexOf('w') !== -1) {
+      newW = Math.max(PANEL_MIN_W, Math.min(PANEL_MAX_W, rzSW - dx));
+      newL = rzSL + (rzSW - newW);
+    }
+    // 南/北：改高（北边同时移动 top）
+    if (rzDir.indexOf('s') !== -1) {
+      newH = Math.max(PANEL_MIN_H, Math.min(PANEL_MAX_H, rzSH + dy));
+    }
+    if (rzDir.indexOf('n') !== -1) {
+      newH = Math.max(PANEL_MIN_H, Math.min(PANEL_MAX_H, rzSH - dy));
+      newT = rzST + (rzSH - newH);
+    }
+    $panel.css({
+      width: newW + 'px', height: newH + 'px',
+      left: newL + 'px', top: newT + 'px', right: 'auto',
+    });
+    e.preventDefault();
+  });
+
+  $doc.on('mouseup.lhrz touchend.lhrz', () => {
+    if (!rzDir) return;
+    rzDir = null;
+    $panel.removeClass('lh-resizing');
+    const r = rectOf($panel);
+    写位置({ panelLeft: r.left, panelTop: r.top, panelW: r.width, panelH: r.height });
+  });
+
   // ── 窗口缩放：仅把超出视口的元素拉回，不改变相对布局 ──
   $win.on('resize.lh', () => {
     const fr = rectOf($fab);
@@ -443,7 +528,7 @@ $(() => {
   // ── 卸载 ──
   $(window).on('pagehide', () => {
     $(`[script_id="${标记}"]`).remove();
-    $doc.off('.lh'); $doc.off('.lhzoom');
+    $doc.off('.lh'); $doc.off('.lhzoom'); $doc.off('.lhrz');
     $win.off('.lh');
   });
 });
