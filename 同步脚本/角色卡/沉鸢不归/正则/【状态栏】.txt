@@ -1,0 +1,706 @@
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c8a45c;
+  --gold-bright:#e8d0a0;
+  --gold-dim:#7a5f30;
+  --violet:#9a7ec8;
+  --violet-deep:#5a4080;
+  --rouge:#c86878;
+  --text-main:#ddd5cc;
+  --text-2nd:#8a8090;
+  --text-dim:#5a5360;
+}
+*{box-sizing:border-box}
+.sb-wrap summary::-webkit-details-marker{display:none}
+.sb-wrap summary::marker{display:none}
+.sb-wrap{
+  position:relative;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%,rgba(200,164,92,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 80% 50% at 85% 100%,rgba(154,126,200,.09) 0%,transparent 55%),
+    linear-gradient(165deg,#100b15 0%,#0c0810 55%,#0a070d 100%);
+  color:var(--text-main);
+  font-family:"Noto Serif SC","Microsoft YaHei",serif;
+  border-radius:13px;
+  border:1px solid rgba(200,164,92,.28);
+  box-shadow:
+    0 0 30px rgba(154,126,200,.10),
+    0 6px 34px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(200,164,92,.06);
+  overflow:hidden;
+  margin:14px 0;
+}
+/* ── 古书页纹理 ── */
+.sb-wrap::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:13px;
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 24px,rgba(200,164,92,.01) 24px,rgba(200,164,92,.01) 25px),
+    repeating-linear-gradient(90deg,transparent,transparent 24px,rgba(200,164,92,.007) 24px,rgba(200,164,92,.007) 25px);
+  opacity:.6;
+}
+.sb-inner{position:relative;z-index:1}
+
+/* ── 折叠头 ── */
+.sb-wrap>summary{
+  list-style:none;cursor:pointer;
+  display:flex;align-items:center;gap:13px;
+  padding:15px 22px;position:relative;z-index:1;
+  background:linear-gradient(135deg,rgba(200,164,92,.12),rgba(154,126,200,.06) 55%,rgba(200,164,92,.09));
+  border-bottom:1px solid rgba(200,164,92,.14);
+  transition:background .35s,box-shadow .35s;
+}
+.sb-wrap:not([open])>summary{border-bottom-color:transparent}
+.sb-wrap>summary:hover{background:linear-gradient(135deg,rgba(200,164,92,.17),rgba(154,126,200,.10) 55%,rgba(200,164,92,.13));
+  box-shadow:inset 0 0 20px rgba(154,126,200,.04)}
+.sb-wrap>summary::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--violet),var(--rouge),transparent);
+  box-shadow:0 0 10px rgba(154,126,200,.5);
+}
+/* 折叠头右上角装饰印纹 */
+.sb-wrap>summary::after{
+  content:"◇";position:absolute;top:9px;right:14px;
+  font-size:10px;color:rgba(200,164,92,.15);letter-spacing:0;
+  transition:color .35s,transform .5s;
+}
+.sb-wrap>summary:hover::after{color:rgba(200,164,92,.35);transform:rotate(45deg)}
+/* 折叠头底部装饰线（展开时） */
+.sb-wrap[open]>summary{
+  background-image:
+    linear-gradient(90deg,transparent 5%,rgba(200,164,92,.06) 20%,rgba(154,126,200,.04) 50%,rgba(200,164,92,.06) 80%,transparent 95%);
+  background-size:100% 1px;background-repeat:no-repeat;background-position:bottom;
+}
+.sb-sigil{width:20px;height:20px;flex-shrink:0;
+  filter:drop-shadow(0 0 5px rgba(200,164,92,.35));
+  animation:sbFloat 6s ease-in-out infinite}
+@keyframes sbFloat{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.sb-sigil path{stroke:url(#sbg);stroke-width:1.4;fill:none}
+.sb-sigil circle{fill:var(--violet)}
+.sb-title-main{
+  font-size:16px;letter-spacing:6px;font-weight:600;
+  background:linear-gradient(150deg,#d8b878,var(--gold) 48%,#b89bd0 95%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.sb-count{
+  font-size:12px;color:var(--violet);letter-spacing:1px;opacity:.75;
+  padding:2px 9px;border:1px solid rgba(154,126,200,.3);border-radius:20px;
+  background:rgba(154,126,200,.06);
+}
+.sb-tog{margin-left:auto;font-size:12px;color:var(--text-dim);letter-spacing:1px;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;transition:color .3s}
+.sb-wrap>summary:hover .sb-tog{color:var(--violet)}
+.sb-wrap[open] .sb-tog::after{content:"收 起 ▲"}
+.sb-wrap:not([open]) .sb-tog::after{content:"展 开 ▼"}
+
+.sb-inner{
+  padding:17px 19px 19px;
+  animation:sbReveal .45s cubic-bezier(.2,.7,.3,1);
+  position:relative;z-index:1;
+}
+/* 内页微弱墨晕 */
+.sb-inner::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 50% 40% at 85% 15%,rgba(154,126,200,.025) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 30% at 10% 85%,rgba(200,164,92,.02) 0%,transparent 50%);
+}
+@keyframes sbReveal{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+/* ── 世界条 ── */
+.sb-world-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}
+.sb-world-item{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 14px;font-size:13px;
+  background:rgba(200,164,92,.045);
+  border:1px solid rgba(200,164,92,.12);border-radius:20px;
+}
+.sb-world-label{color:var(--gold-dim);letter-spacing:1px;font-size:12px}
+.sb-world-val{color:var(--text-main)}
+
+/* ── 沈鸢主卡 ── */
+.sb-hero{
+  position:relative;
+  background:
+    radial-gradient(ellipse 70% 130% at 0% 0%,rgba(154,126,200,.12),transparent 60%),
+    linear-gradient(135deg,#18111f,#110d16);
+  border:1px solid rgba(154,126,200,.32);
+  border-radius:10px;padding:13px 17px;margin-bottom:17px;
+  box-shadow:inset 0 0 34px rgba(90,64,128,.10);
+  transition:box-shadow .35s;
+}
+.sb-hero:hover{box-shadow:inset 0 0 34px rgba(90,64,128,.14),0 0 16px rgba(154,126,200,.08)}
+.sb-hero::before{
+  content:"";position:absolute;left:0;top:14px;bottom:14px;width:2px;border-radius:2px;
+  background:linear-gradient(180deg,var(--violet),var(--rouge));
+  box-shadow:0 0 10px rgba(154,126,200,.6);
+}
+.sb-hero-top{display:flex;align-items:baseline;gap:11px;margin-bottom:9px}
+.sb-hero-name{
+  font-size:17px;font-weight:600;letter-spacing:3px;
+  background:linear-gradient(150deg,#e8d0a0,#c8a45c 38%,#b89bd0);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.sb-hero-tag{font-size:12px;color:var(--violet);opacity:.75;letter-spacing:1px}
+.sb-hero-grid{display:flex;gap:20px;flex-wrap:wrap;font-size:13px}
+.sb-hero-grid .k{color:var(--text-dim);margin-right:7px;letter-spacing:1px}
+.sb-hero-grid .v{color:var(--text-main)}
+
+/* ── 炮友区 ── */
+.sb-sec-title{
+  display:flex;align-items:center;gap:11px;margin:0 0 13px;
+  font-size:12px;letter-spacing:4px;color:rgba(154,126,200,.6);
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+}
+.sb-sec-title::before,.sb-sec-title::after{content:"";flex:1;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(154,126,200,.22),transparent)}
+
+.sb-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+
+.sb-card{
+  position:relative;
+  background:linear-gradient(155deg,#150f1c,#100c15);
+  border:1px solid #2a2436;border-radius:8px;
+  padding:12px 14px;transition:all .3s cubic-bezier(.4,0,.2,1);overflow:hidden;
+  animation:sbCardIn .5s cubic-bezier(.2,.7,.3,1) backwards;
+}
+@keyframes sbCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.sb-card::after{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--dot,var(--gold-dim));opacity:.6;transition:opacity .3s,box-shadow .3s;
+}
+/* 炮友卡片 hover 光泽扫过效果 */
+.sb-card::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(120deg,transparent 30%,rgba(200,164,92,.07) 50%,transparent 70%);
+  transform:translateX(-120%);transition:transform .6s ease;
+}
+.sb-card:hover::before{transform:translateX(120%)}
+.sb-card:hover{
+  border-color:rgba(154,126,200,.45);
+  box-shadow:0 0 22px rgba(154,126,200,.13),inset 0 0 24px rgba(90,64,128,.07);
+  transform:translateY(-2px);
+}
+.sb-card:hover::after{opacity:1;box-shadow:0 0 10px var(--dot,var(--violet))}
+.sb-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.sb-card-name{font-size:15px;font-weight:600;letter-spacing:1px;color:var(--text-main)}
+.sb-card-fav{
+  font-size:17px;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+  color:var(--gold);transition:color .3s,text-shadow .3s;
+}
+.sb-card:hover .sb-card-fav{color:var(--violet);text-shadow:0 0 8px rgba(154,126,200,.5)}
+.sb-bar-bg{height:4px;background:#08060a;border-radius:3px;margin:7px 0 8px;overflow:hidden}
+.sb-bar-fill{height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--violet-deep),var(--violet) 55%,var(--rouge));
+  box-shadow:0 0 8px rgba(154,126,200,.5);
+  transition:width .6s cubic-bezier(.2,.7,.3,1);}
+.sb-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+.sb-phase{color:var(--gold);letter-spacing:.5px}
+.sb-state{color:var(--text-2nd);font-style:italic;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52%;text-align:right}
+.sb-met{font-size:11px;color:var(--text-dim);margin-top:5px;letter-spacing:.5px}
+
+/* 无在场炮友时 */
+.sb-empty{
+  text-align:center;padding:18px 0 8px;color:var(--text-dim);
+  font-size:13px;letter-spacing:2px;font-style:italic;
+}
+.sb-empty span{color:var(--violet);opacity:.7}
+
+.sb-foot{margin-top:15px;text-align:center;font-size:11px;letter-spacing:3px;
+  color:rgba(107,96,104,.45);font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+  position:relative;z-index:1}
+.sb-foot::before{content:"";display:block;width:36px;height:1px;margin:0 auto 8px;
+  background:linear-gradient(90deg,transparent,rgba(200,164,92,.12),transparent)}
+
+/* ── 回忆 ── */
+.sb-recall-btn{
+  margin-left:auto;flex-shrink:0;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 13px;font-size:13px;letter-spacing:1px;
+  color:rgba(154,126,200,.8);
+  border:1px solid rgba(154,126,200,.3);border-radius:14px;
+  background:rgba(154,126,200,.06);
+  transition:all .3s cubic-bezier(.4,0,.2,1);
+  position:relative;overflow:hidden;
+}
+.sb-recall-btn:hover{color:#e8d8f0;border-color:rgba(154,126,200,.6);
+  background:rgba(154,126,200,.14);box-shadow:0 0 12px rgba(154,126,200,.2);
+  transform:translateY(-1px)}
+/* 回忆按钮激活时呼吸脉冲 */
+.sb-recall-btn.active{color:#e8d8f0;border-color:var(--violet);
+  background:rgba(154,126,200,.18);box-shadow:0 0 14px rgba(154,126,200,.3);
+  animation:recallPulse 2.5s ease-in-out infinite}
+@keyframes recallPulse{
+  0%,100%{box-shadow:0 0 14px rgba(154,126,200,.3)}
+  50%{box-shadow:0 0 22px rgba(154,126,200,.5),0 0 6px rgba(200,164,92,.15)}}
+/* 回忆按钮光泽扫过 */
+.sb-recall-btn::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(120deg,transparent 30%,rgba(200,164,92,.12) 50%,transparent 70%);
+  transform:translateX(-120%);transition:transform .5s ease;
+}
+.sb-recall-btn:hover::after{transform:translateX(120%)}
+.sb-recall-btn .gly{font-size:12px;line-height:1;transition:transform .3s}
+.sb-recall-btn:hover .gly{transform:scale(1.15)}
+
+.sb-recall{
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .45s cubic-bezier(.4,0,.2,1),opacity .35s ease,margin .35s ease;
+}
+.sb-recall.open{max-height:420px;opacity:1;margin-top:15px}
+.sb-recall-head{
+  display:flex;align-items:center;gap:11px;margin-bottom:12px;
+  font-size:12px;letter-spacing:4px;color:rgba(154,126,200,.6);
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+}
+.sb-recall-head::before,.sb-recall-head::after{content:"";flex:1;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(154,126,200,.22),transparent)}
+.sb-recall-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.rc-btn{
+  position:relative;cursor:pointer;text-align:center;overflow:hidden;
+  padding:9px 5px;border-radius:8px;
+  border:1px solid #2a2436;
+  background:linear-gradient(155deg,#150f1c,#100c15);
+  transition:all .3s cubic-bezier(.4,0,.2,1);
+}
+.rc-btn::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--dot,var(--violet));opacity:.5;transition:opacity .3s,box-shadow .3s}
+/* 回忆面板按钮 hover 光泽 */
+.rc-btn::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(120deg,transparent 30%,rgba(200,164,92,.06) 50%,transparent 70%);
+  transform:translateX(-120%);transition:transform .5s ease;
+}
+.rc-btn:hover::before{transform:translateX(120%)}
+.rc-btn:hover{transform:translateY(-2px);border-color:rgba(154,126,200,.5);
+  box-shadow:0 0 16px rgba(154,126,200,.14),inset 0 0 18px rgba(90,64,128,.06)}
+.rc-btn:hover::after{opacity:1;box-shadow:0 0 8px var(--dot,var(--violet))}
+.rc-btn:active{transform:scale(.95)}
+.rc-btn.flash{animation:rcFlash .6s ease}
+@keyframes rcFlash{0%{box-shadow:0 0 0 rgba(154,126,200,0)}
+  35%{box-shadow:0 0 22px rgba(154,126,200,.55);border-color:var(--violet)}
+  100%{box-shadow:0 0 0 rgba(154,126,200,0)}}
+.rc-btn .nm{display:block;font-size:13px;font-weight:600;letter-spacing:.5px;color:var(--text-main)}
+.rc-btn .ht{display:block;font-size:11px;margin-top:2px;color:var(--gold-dim);letter-spacing:.5px}
+.rc-btn:hover .nm{color:#e8d8f0}
+.rc-btn:hover .ht{color:var(--gold)}
+.sb-recall-tip{margin-top:10px;text-align:center;font-size:11px;letter-spacing:1px;
+  color:var(--text-dim);font-style:italic}
+
+@media(max-width:520px){
+  .sb-grid{grid-template-columns:1fr}
+  .sb-hero-grid{gap:14px}
+  .sb-recall-grid{grid-template-columns:repeat(2,1fr)}
+}
+/* ── 粒子画布 ── */
+.sb-particles-canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;z-index:2;border-radius:13px;
+}
+</style>
+</head>
+<body>
+<script type="application/json" id="sb-macro-data">{{format_message_variable::stat_data}}</script>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="sbg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#e8d0a0"/><stop offset=".55" stop-color="#c8a45c"/><stop offset="1" stop-color="#9a7ec8"/>
+  </linearGradient>
+</defs></svg>
+
+<details class="sb-wrap" id="sb-wrap">
+<canvas class="sb-particles-canvas" id="sb-particles-canvas"></canvas>
+<summary>
+  <svg class="sb-sigil" viewBox="0 0 24 24"><path d="M12 2 L20 12 L12 22 L4 12 Z"/><circle cx="12" cy="12" r="1.8"/></svg>
+  <span class="sb-title-main">沉 鸢 不 归</span>
+  <span class="sb-count" id="sb-count">—</span>
+  <span class="sb-recall-btn" id="sb-recall-btn" title="回忆闪回"><span class="gly">💭</span>回忆</span>
+  <span class="sb-tog"></span>
+</summary>
+<div class="sb-inner" id="sb-inner">
+  <div class="sb-empty">状态加载中<span>…</span></div>
+</div>
+</details>
+
+<script>
+(function(){
+  // 已知炮友（用于把"在场角色"过滤出真正的炮友，并配色）
+  var KNOWN={
+    '闻浅':'#c87a90','安樱':'#e0a0c0','颜絮':'#a0a0d8','姜野':'#e08858','苏小眠':'#8ab0c8',
+    '凌千夏':'#d89858','宋薄寒':'#90a8c0','裴寒露':'#b0a0c8','乔晚':'#c89878','时染':'#e0b060'
+  };
+
+  // 回忆面板数据（触发短语见项目规范 §十三.4）
+  var RECALL=[
+    {name:'闻浅',phrase:'闻浅的第一次',hint:'强行侵犯'},
+    {name:'安樱',phrase:'安樱的第一次',hint:'半哄半骗'},
+    {name:'颜絮',phrase:'颜絮的第一次',hint:'睡奸威胁'},
+    {name:'姜野',phrase:'姜野的第一次',hint:'挑衅征服'},
+    {name:'苏小眠',phrase:'苏小眠的第一次',hint:'夸赞引诱'},
+    {name:'凌千夏',phrase:'凌千夏的第一次',hint:'威胁顺从'},
+    {name:'宋薄寒',phrase:'宋薄寒的第一次',hint:'逐步攻略'},
+    {name:'裴寒露',phrase:'裴寒露的第一次',hint:'酒后意外'},
+    {name:'乔晚',phrase:'乔晚的第一次',hint:'撞见秘密'},
+    {name:'时染',phrase:'时染的第一次',hint:'毕业典礼'}
+  ];
+
+  var recallOpen=false;
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  // 解析宏注入的 stat_data（开场白楼层也能拿到，不依赖 JS 运行时变量是否就绪）
+  function readMacroData(){
+    try{
+      var el=document.getElementById('sb-macro-data');
+      if(!el) return null;
+      var raw=(el.textContent||'').trim();
+      // 宏未被替换（仍是字面量）或为空 → 视为无效
+      if(!raw || raw.indexOf('format_message_variable')!==-1) return null;
+      var obj=JSON.parse(raw);
+      if(obj && typeof obj==='object' && (obj.世界||obj.炮友数据||obj.沈鸢)) return obj;
+    }catch(e){}
+    return null;
+  }
+
+  function readVars(){
+    // 1) 优先用宏数据：开场白楼层 / 首屏最可靠
+    var macro=readMacroData();
+    if(macro) return { stat_data: macro };
+    // 2) 兜底：JS 运行时变量（正常对话楼层、刷新时）
+    try{ if(typeof getAllVariables==='function') return getAllVariables()||{}; }catch(e){}
+    try{ if(typeof getVariables==='function') return getVariables({type:'message'})||{}; }catch(e){}
+    return {};
+  }
+
+  function render(){
+    var inner=document.getElementById('sb-inner');
+    var countEl=document.getElementById('sb-count');
+    if(!inner) return;
+
+    var vars=readVars();
+    var sd=(vars&&vars.stat_data)||vars||{};
+    var world=sd.世界||{};
+    var hero=sd.沈鸢||{};
+    var pals=sd.炮友数据||{};
+
+    // 在场角色：过滤出已知炮友（排除沈鸢与男友等旁观者）
+    var present=(Array.isArray(world.在场角色)?world.在场角色:[])
+      .filter(function(n){return KNOWN.hasOwnProperty(n) && pals[n];});
+
+    var html='';
+    // 世界条
+    html+='<div class="sb-world-row">';
+    html+='<div class="sb-world-item"><span class="sb-world-label">日期</span><span class="sb-world-val">'+esc(world.当前日期)+'</span></div>';
+    html+='<div class="sb-world-item"><span class="sb-world-label">时间</span><span class="sb-world-val">'+esc(world.当前时间)+'</span></div>';
+    html+='<div class="sb-world-item"><span class="sb-world-label">天气</span><span class="sb-world-val">'+esc(world.天气)+'</span></div>';
+    html+='<div class="sb-world-item"><span class="sb-world-label">场景</span><span class="sb-world-val">'+esc(world.当前场景)+'</span></div>';
+    html+='</div>';
+
+    // 沈鸢主卡
+    html+='<div class="sb-hero"><div class="sb-hero-top">'
+      +'<span class="sb-hero-name">沈鸢</span><span class="sb-hero-tag">伪娘 · 男身女相</span></div>'
+      +'<div class="sb-hero-grid">'
+      +'<div><span class="k">位置</span><span class="v">'+esc(hero.当前位置)+'</span></div>'
+      +'<div><span class="k">状态</span><span class="v">'+esc(hero.当前状态)+'</span></div>'
+      +'</div></div>';
+
+    // 在场炮友
+    html+='<div class="sb-sec-title">PRESENT</div>';
+    if(present.length===0){
+      html+='<div class="sb-empty">此刻仅沈鸢一人<span> ·</span></div>';
+      countEl.textContent='独处';
+    }else{
+      countEl.textContent='在场 '+present.length;
+      html+='<div class="sb-grid">';
+      for(var i=0;i<present.length;i++){
+        var name=present[i], p=pals[name]||{}, dot=KNOWN[name]||'#9a7ec8';
+        var fav=Number(p.好感度); if(isNaN(fav)) fav=0;
+        var w=Math.max(0,Math.min(100,fav));
+        html+='<div class="sb-card" style="--dot:'+dot+';animation-delay:'+(i*60)+'ms">'
+          +'<div class="sb-card-top"><span class="sb-card-name">'+esc(name)+'</span>'
+          +'<span class="sb-card-fav">'+esc(p.好感度)+'</span></div>'
+          +'<div class="sb-bar-bg"><div class="sb-bar-fill" style="width:'+w+'%"></div></div>'
+          +'<div class="sb-card-foot"><span class="sb-phase">'+esc(p.当前阶段)+'</span>'
+          +'<span class="sb-state">'+esc(p.当前状态)+'</span></div>'
+          +'<div class="sb-met">最后见面 · '+esc(p.最后见面)+'</div>'
+          +'</div>';
+      }
+      html+='</div>';
+    }
+    // 回忆面板
+    html+='<div class="sb-recall" id="sb-recall">';
+    html+='<div class="sb-recall-head">MEMORIES · 初次</div>';
+    html+='<div class="sb-recall-grid">';
+    for(var r=0;r<RECALL.length;r++){
+      var rc=RECALL[r], dot=KNOWN[rc.name]||'#9a7ec8';
+      html+='<div class="rc-btn" data-phrase="'+esc(rc.phrase)+'" style="--dot:'+dot+'">'
+        +'<span class="nm">'+esc(rc.name)+'</span><span class="ht">'+esc(rc.hint)+'</span></div>';
+    }
+    html+='</div>';
+    html+='<div class="sb-recall-tip">点击将触发短语追加到输入框 · 按发送即可回忆</div>';
+    html+='</div>';
+
+    html+='<div class="sb-foot">THE KITE NEVER RETURNS</div>';
+    inner.innerHTML=html;
+
+    // 渲染后保持展开状态 + 绑定按钮
+    if(recallOpen){ var rp=document.getElementById('sb-recall'); if(rp) rp.classList.add('open'); }
+    bindRecall();
+  }
+
+  // 将触发短语追加到酒馆输入框（iframe → 父窗口）
+  function appendToInput(phrase){
+    var sel='#send_textarea';
+    var doc=null;
+    try{ doc=window.parent&&window.parent.document; }catch(e){}
+    var ta=null;
+    if(doc){ ta=doc.querySelector(sel); }
+    if(!ta){ try{ ta=document.querySelector(sel); }catch(e){} }
+    if(!ta) return false;
+    var v=ta.value||'';
+    if(v && !/\s$/.test(v)) v+=' ';
+    ta.value=v+phrase;
+    try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+    try{ ta.focus(); }catch(e){}
+    return true;
+  }
+
+  function bindRecall(){
+    var btns=document.querySelectorAll('.rc-btn');
+    for(var i=0;i<btns.length;i++){
+      (function(b){
+        b.onclick=function(){
+          var ok=appendToInput(b.getAttribute('data-phrase'));
+          if(ok){ b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }
+        };
+      })(btns[i]);
+    }
+  }
+
+  // 首次渲染（容错重试，等待变量就绪）
+  var tries=0;
+  function boot(){
+    render();
+    var sd=readVars().stat_data;
+    if((!sd||!sd.世界||!sd.世界.当前日期) && tries<10){ tries++; setTimeout(boot,250); }
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',boot);
+  }else{ boot(); }
+
+  // 展开时刷新一次，确保数据最新
+  var wrap=document.getElementById('sb-wrap');
+  if(wrap){ wrap.addEventListener('toggle',function(){ if(wrap.open) render(); }); }
+
+  // 💭 回忆按钮：切换面板（阻止冒泡，避免误触发折叠头）
+  var rbtn=document.getElementById('sb-recall-btn');
+  if(rbtn){
+    rbtn.addEventListener('click',function(e){
+      e.preventDefault(); e.stopPropagation();
+      if(wrap && !wrap.open){ wrap.open=true; render(); } // 折叠时点回忆，自动展开状态栏
+      recallOpen=!recallOpen;
+      rbtn.classList.toggle('active',recallOpen);
+      var rp=document.getElementById('sb-recall');
+      if(rp) rp.classList.toggle('open',recallOpen);
+    });
+  }
+
+/* ═══════════════════════════════════════════
+   光标拖尾粒子 + 环境飘落粒子（排斥避让）
+   ═══════════════════════════════════════════ */
+(function(){
+  var container = document.getElementById("sb-wrap");
+  var canvas = document.getElementById("sb-particles-canvas");
+  if(!container||!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var w, h, animId;
+  var cursorParts = [];
+  var ambientParts = [];
+  var trail = [];
+  var MAX_TRAIL = 36;
+  var AMBIENT_MAX = 55;
+  var CURSOR_MAX = 80;
+  var REPEL_R = 68;
+  var REPEL_FORCE = 0.6;
+  var mouseX = -200, mouseY = -200;
+  var mouseOn = false;
+  var mouseSpeed = 0;
+  var lastMX = -200, lastMY = -200;
+
+  function resize(){
+    var r = container.getBoundingClientRect();
+    w = canvas.width = r.width;
+    h = canvas.height = r.height;
+  }
+
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+
+  function initAmbient(){
+    ambientParts = [];
+    for(var i=0; i<AMBIENT_MAX; i++){
+      ambientParts.push({
+        x: Math.random()*w,
+        y: Math.random()*h,
+        vx: (Math.random()-.5)*.25,
+        vy: .15 + Math.random()*.5,
+        _baseVy: .15 + Math.random()*.5,
+        size: .5 + Math.random()*1.3,
+        gold: Math.random() < .65,
+        phase: Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function spawnCursor(x, y, speed){
+    var count = speed > 2 ? 3 : (speed > .5 ? 2 : 1);
+    for(var i=0; i<count; i++){
+      if(cursorParts.length >= CURSOR_MAX) cursorParts.shift();
+      var gold = Math.random() < .55;
+      cursorParts.push({
+        x: x + rnd(-5,5),
+        y: y + rnd(-5,5),
+        vx: rnd(-.6,.6),
+        vy: rnd(-.6,.6),
+        size: .7 + Math.random()*2.4,
+        life: 1,
+        decay: .012 + Math.random()*.032,
+        gold: gold
+      });
+    }
+  }
+
+  function update(){
+    if(mouseOn){
+      trail.push({x: mouseX, y: mouseY});
+      if(trail.length > MAX_TRAIL) trail.shift();
+      var spd = mouseSpeed;
+      var count = spd > 3 ? 4 : (spd > 1 ? 3 : 2);
+      for(var i=0; i<count; i++) spawnCursor(mouseX, mouseY, spd);
+      if(trail.length > 2){
+        var step = Math.max(2, Math.floor(trail.length/6));
+        for(var k=0; k<trail.length-step; k+=step){
+          var tp = trail[k];
+          if(Math.random() < .35) spawnCursor(tp.x, tp.y, 1);
+        }
+      }
+    } else {
+      if(trail.length > 0) trail.shift();
+    }
+
+    for(var j=cursorParts.length-1; j>=0; j--){
+      var cp = cursorParts[j];
+      cp.x += cp.vx;
+      cp.y += cp.vy;
+      cp.vx *= .965;
+      cp.vy *= .965;
+      cp.life -= cp.decay;
+      if(cp.life <= 0) cursorParts.splice(j,1);
+    }
+
+    var samples = [];
+    if(mouseOn) samples.push({x: mouseX, y: mouseY});
+    for(var s=0; s<trail.length; s+=4) samples.push(trail[s]);
+
+    for(var m=0; m<ambientParts.length; m++){
+      var ap = ambientParts[m];
+      if(samples.length > 0 && mouseOn){
+        var totalFx = 0, totalFy = 0;
+        for(var n=0; n<samples.length; n++){
+          var dx = ap.x - samples[n].x;
+          var dy = ap.y - samples[n].y;
+          var dist = Math.sqrt(dx*dx + dy*dy);
+          if(dist < REPEL_R && dist > .5){
+            var f = REPEL_FORCE * Math.pow(1 - dist/REPEL_R, 1.5);
+            totalFx += (dx/dist) * f;
+            totalFy += (dy/dist) * f;
+          }
+        }
+        ap.vx += totalFx;
+        ap.vy += totalFy;
+      }
+      ap.x += ap.vx + Math.sin(ap.phase + performance.now()*.0008) * .12;
+      ap.y += ap.vy;
+      ap.phase += .008;
+      ap.vx *= .985;
+      ap.vy *= .985;
+      ap.vy += (ap._baseVy - ap.vy) * .003;
+      if(ap.y > h + 15){ ap.y = -15; ap.x = Math.random()*w; ap.vx = 0; ap.vy = ap._baseVy; }
+      if(ap.x < -15) ap.x = w + 15;
+      if(ap.x > w + 15) ap.x = -15;
+    }
+
+    if(mouseOn){
+      mouseSpeed = Math.sqrt((mouseX-lastMX)*(mouseX-lastMX) + (mouseY-lastMY)*(mouseY-lastMY));
+      lastMX = mouseX;
+      lastMY = mouseY;
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, w, h);
+    for(var i=0; i<ambientParts.length; i++){
+      var ap = ambientParts[i];
+      var a = .25 + Math.sin(ap.phase)*.12;
+      var col = ap.gold ? "200,164,92" : "154,126,200";
+      ctx.fillStyle = "rgba("+col+","+a+")";
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, ap.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "lighter";
+    for(var j=0; j<cursorParts.length; j++){
+      var cp = cursorParts[j];
+      var a2 = cp.life * .6;
+      var col2 = cp.gold ? "200,164,92" : "154,126,200";
+      var sz = cp.size * (1 + cp.life*.5);
+      var g = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, sz*2.5);
+      g.addColorStop(0, "rgba("+col2+","+a2+")");
+      g.addColorStop(.35, "rgba("+col2+","+(a2*.45)+")");
+      g.addColorStop(1, "rgba("+col2+",0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, sz*2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  function loop(){
+    update();
+    draw();
+    animId = requestAnimationFrame(loop);
+  }
+
+  container.addEventListener("mousemove", function(e){
+    var r = canvas.getBoundingClientRect();
+    mouseX = e.clientX - r.left;
+    mouseY = e.clientY - r.top;
+    mouseOn = true;
+  });
+  container.addEventListener("mouseenter", function(e){
+    mouseOn = true;
+    var r = canvas.getBoundingClientRect();
+    mouseX = e.clientX - r.left;
+    mouseY = e.clientY - r.top;
+  });
+  container.addEventListener("mouseleave", function(){ mouseOn = false; });
+  window.addEvenatListener("resize", function(){ resize(); initAmbient(); });
+
+  resize();
+  initAmbient();
+  loop();
+})();
+
+})();
+</script>
+</body>
+</html>
+```

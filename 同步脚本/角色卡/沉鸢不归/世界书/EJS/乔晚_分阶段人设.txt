@@ -1,0 +1,11 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var qw = getvar('stat_data.炮友数据.乔晚.好感度', { defaults: 52 });
+_%>
+<%_ if (qw >= 86) { _%>
+<%- await getwi(null, '乔晚_阶段04_正牌争夺') %>
+<%_ } else if (qw >= 61) { _%>
+<%- await getwi(null, '乔晚_阶段03_公开亲近') %>
+<%_ } else { _%>
+<%- await getwi(null, '乔晚_阶段02_隐秘偏爱') %>
+<%_ } _%>

@@ -1,0 +1,13 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var sr = getvar('stat_data.炮友数据.时染.好感度', { defaults: 10 });
+_%>
+<%_ if (sr >= 81) { _%>
+<%- await getwi(null, '时染_阶段04_甘愿沉沦') %>
+<%_ } else if (sr >= 56) { _%>
+<%- await getwi(null, '时染_阶段03_欲罢不能') %>
+<%_ } else if (sr >= 26) { _%>
+<%- await getwi(null, '时染_阶段02_背德刺激') %>
+<%_ } else { _%>
+<%- await getwi(null, '时染_阶段01_禁忌初尝') %>
+<%_ } _%>

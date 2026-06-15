@@ -1,0 +1,9 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var yx = getvar('stat_data.炮友数据.颜絮.好感度', { defaults: 75 });
+_%>
+<%_ if (yx >= 91) { _%>
+<%- await getwi(null, '颜絮_阶段04_不顾一切') %>
+<%_ } else { _%>
+<%- await getwi(null, '颜絮_阶段03_珍贵渴望') %>
+<%_ } _%>

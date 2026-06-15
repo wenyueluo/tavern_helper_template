@@ -1,0 +1,9 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var ay = getvar('stat_data.炮友数据.安樱.好感度', { defaults: 78 });
+_%>
+<%_ if (ay >= 91) { _%>
+<%- await getwi(null, '安樱_阶段04_如梦初醒') %>
+<%_ } else { _%>
+<%- await getwi(null, '安樱_阶段03_无虑沉溺') %>
+<%_ } _%>

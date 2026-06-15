@@ -1,0 +1,11 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var p = getvar('stat_data.炮友数据.裴寒露.好感度', { defaults: 48 });
+_%>
+<%_ if (p >= 86) { _%>
+<%- await getwi(null, '裴寒露_阶段04_挣脱枷锁') %>
+<%_ } else if (p >= 61) { _%>
+<%- await getwi(null, '裴寒露_阶段03_主动索取') %>
+<%_ } else { _%>
+<%- await getwi(null, '裴寒露_阶段02_暗藏渴望') %>
+<%_ } _%>

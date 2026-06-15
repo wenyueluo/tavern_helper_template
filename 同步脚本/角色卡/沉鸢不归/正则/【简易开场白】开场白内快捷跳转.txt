@@ -1,0 +1,185 @@
+```html
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>开场白导航</title>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent}
+:root{
+  --gold:#c8a45c;--gold-bright:#e8d0a0;--gold-dim:#7a5f30;
+  --violet:#9a7ec8;--violet-deep:#5a4080;--rouge:#c86878;
+  --text:#c8c0b8;--text-dim:#6b6068;
+}
+.jk-wrap{
+  display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+  padding:12px 16px;position:relative;overflow:hidden;
+  border:1px solid rgba(200,164,92,.26);border-radius:11px;
+  font-family:"Noto Serif SC","Microsoft YaHei",serif;
+  background:
+    radial-gradient(ellipse 45% 130% at 0% 50%,rgba(154,126,200,.09),transparent 60%),
+    linear-gradient(150deg,#0e0a13,#100c15);
+  box-shadow:0 4px 22px rgba(0,0,0,.45),inset 0 0 34px rgba(90,64,128,.05);
+}
+.jk-wrap::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--violet),var(--rouge),transparent);
+  box-shadow:0 0 10px rgba(154,126,200,.5);
+}
+.jk-sigil{width:17px;height:17px;flex-shrink:0;margin-left:2px;
+  filter:drop-shadow(0 0 5px rgba(200,164,92,.3));
+  animation:jkFloat 6s ease-in-out infinite}
+@keyframes jkFloat{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.jk-sigil path{stroke:url(#jkg);stroke-width:1.4;fill:none}
+.jk-sigil circle{fill:var(--violet)}
+.jk-title{
+  font-size:12px;font-weight:600;letter-spacing:2px;margin-right:2px;
+  background:linear-gradient(135deg,#d8b878,var(--gold) 50%,#b89bd0);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.jk-div{width:1px;align-self:stretch;margin:2px 3px;
+  background:linear-gradient(180deg,transparent,rgba(154,126,200,.3),transparent)}
+
+/* 返回封面按钮 */
+.jk-back{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 14px;font-size:11px;letter-spacing:2px;
+  font-family:inherit;color:rgba(200,164,92,.85);cursor:pointer;
+  border:1px solid rgba(200,164,92,.32);border-radius:16px;
+  background:rgba(200,164,92,.05);position:relative;overflow:hidden;
+  transition:all .35s cubic-bezier(.4,0,.2,1);
+}
+.jk-back span{position:relative;z-index:1}
+.jk-back::before{content:"";position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(154,126,200,.18) 50%,transparent 70%);
+  transform:translateX(-130%);transition:transform .55s ease}
+.jk-back:hover{color:#e8d8f0;border-color:rgba(154,126,200,.6);
+  background:rgba(154,126,200,.12);box-shadow:0 0 16px rgba(154,126,200,.16)}
+.jk-back:hover::before{transform:translateX(130%)}
+.jk-back:active{transform:scale(.95)}
+
+/* 数字圆钮 */
+.jk-num{
+  position:relative;width:27px;height:27px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50%;cursor:pointer;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:13px;
+  color:rgba(184,148,96,.7);
+  border:1px solid rgba(200,164,92,.22);
+  background:rgba(200,164,92,.04);
+  transition:all .3s cubic-bezier(.4,0,.2,1);
+}
+.jk-num:hover{
+  color:#e8d8f0;border-color:rgba(154,126,200,.6);
+  background:rgba(154,126,200,.14);
+  box-shadow:0 0 14px rgba(154,126,200,.22);
+  transform:translateY(-2px);
+}
+.jk-num:active{transform:scale(.92)}
+.jk-num.special{
+  color:rgba(200,164,92,.8);border-color:rgba(200,164,92,.4);
+  background:rgba(200,164,92,.07);
+}
+.jk-num.special:hover{color:var(--gold-bright);border-color:rgba(200,164,92,.75);
+  background:rgba(200,164,92,.14);box-shadow:0 0 14px rgba(200,164,92,.2)}
+/* 当前章高亮 */
+.jk-num.active{
+  color:#fff;border-color:var(--violet);
+  background:linear-gradient(160deg,var(--violet-deep),var(--violet));
+  box-shadow:0 0 16px rgba(154,126,200,.5);
+}
+.jk-num.active.special{
+  border-color:var(--gold);
+  background:linear-gradient(160deg,#8a6a30,var(--gold));
+  box-shadow:0 0 16px rgba(200,164,92,.45);
+}
+
+/* tooltip */
+.jk-num .tip{
+  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(4px);
+  white-space:nowrap;padding:5px 11px;font-size:11px;letter-spacing:.5px;
+  font-family:"Noto Serif SC",serif;font-style:normal;
+  color:var(--text);background:linear-gradient(160deg,#16101e,#100c15);
+  border:1px solid rgba(154,126,200,.35);border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:all .25s ease;z-index:20;
+}
+.jk-num .tip b{color:var(--gold-bright);font-weight:600;margin-right:5px}
+.jk-num .tip i{color:var(--violet);font-style:normal;font-size:10px}
+.jk-num .tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:rgba(154,126,200,.35)}
+.jk-num:hover .tip{opacity:1;transform:translateX(-50%) translateY(0)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="jkg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#e8d0a0"/><stop offset=".55" stop-color="#c8a45c"/><stop offset="1" stop-color="#9a7ec8"/>
+  </linearGradient></defs></svg>
+<div class="jk-wrap" id="jk-wrap">
+  <svg class="jk-sigil" viewBox="0 0 24 24"><path d="M12 2 L20 12 L12 22 L4 12 Z"/><circle cx="12" cy="12" r="1.8"/></svg>
+  <span class="jk-title">沉鸢不归</span>
+  <button class="jk-back" id="jk-back" title="返回封面 / 目录"><span>← 封面</span></button>
+  <span class="jk-div"></span>
+</div>
+<script>
+$(function(){
+
+var openers=[
+  {n:1,name:'闻浅',sub:'青梅之约'},{n:2,name:'安樱',sub:'天然沉溺'},
+  {n:3,name:'颜絮',sub:'珍贵渴望'},{n:4,name:'姜野',sub:'认输不认账'},
+  {n:5,name:'苏小眠',sub:'胆怯深爱'},{n:6,name:'凌千夏',sub:'傲娇深陷'},
+  {n:7,name:'宋薄寒',sub:'冰冷消融'},{n:8,name:'裴寒露',sub:'暗藏渴望'},
+  {n:9,name:'乔晚',sub:'隐秘偏爱'},{n:10,name:'时染',sub:'禁忌初尝'}
+];
+var specials=[
+  {n:11,name:'结论',sub:'游乐园人偶服隐奸'},
+  {n:12,name:'参考文献',sub:'NTR游戏之夜'}
+];
+
+/* 读取当前 swipe_id（用于高亮） */
+function currentSwipe(){
+  try{
+    if(typeof getCurrentMessageId==='function' && typeof getChatMessages==='function'){
+      var id=getCurrentMessageId();
+      var m=getChatMessages(id,{include_swipes:true});
+      if(m&&m[0]&&typeof m[0].swipe_id==='number') return m[0].swipe_id;
+    }
+  }catch(e){}
+  return -1;
+}
+
+/* 跳转到指定开场白（await + 强制刷新） */
+var busy=false;
+function goto(swipe){
+  if(busy)return; busy=true;
+  function done(){busy=false;}
+  try{
+    if(typeof setChatMessages==='function'){
+      Promise.resolve(setChatMessages([{message_id:0,swipe_id:swipe}],{refresh:'all'})).then(done,done);
+    }else if(typeof SillyTavern!=='undefined'&&SillyTavern.getContext){
+      var c=SillyTavern.getContext();
+      if(c&&c.setSwipe){c.setSwipe(swipe);setTimeout(done,800);}else done();
+    }else if(window.TavernHelper&&window.TavernHelper.switchMessage){
+      window.TavernHelper.switchMessage(swipe);done();
+    }else done();
+  }catch(err){done();}
+}
+
+var wrap=$('#jk-wrap');
+var cur=currentSwipe();
+
+function mkBtn(o,isSpecial){
+  var cls='jk-num'+(isSpecial?' special':'')+(o.n===cur?' active':'');
+  return $('<div class="'+cls+'" data-swipe="'+o.n+'">'+o.n
+    +'<span class="tip"><b>'+o.name+'</b><i>'+o.sub+'</i></span></div>');
+}
+for(var i=0;i<openers.length;i++) wrap.append(mkBtn(openers[i],false));
+wrap.append('<span class="jk-div"></span>');
+for(var j=0;j<specials.length;j++) wrap.append(mkBtn(specials[j],true));
+
+wrap.on('click','.jk-num',function(){ goto(parseInt($(this).data('swipe'),10)); });
+$('#jk-back').on('click',function(){ goto(0); });
+
+});
+</script>
+</body></html>
+```

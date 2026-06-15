@@ -1,0 +1,9 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var wq = getvar('stat_data.炮友数据.闻浅.好感度', { defaults: 85 });
+_%>
+<%_ if (wq >= 91) { _%>
+<%- await getwi(null, '闻浅_阶段04_唯一执念') %>
+<%_ } else { _%>
+<%- await getwi(null, '闻浅_阶段03_深度交融') %>
+<%_ } _%>

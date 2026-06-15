@@ -1,0 +1,1434 @@
+```html
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>沉鸢不归</title>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-dark:#08060a;
+  --bg-cover:#0e0a11;
+  --gold:#c8a45c;
+  --gold-bright:#e8d0a0;
+  --gold-dim:#7a5f30;
+  --ember:#e07040;
+  --violet:#9a7ec8;
+  --violet-deep:#5a4080;
+  --violet-glow:rgba(154,126,200,.5);
+  --rouge:#c86878;
+  --text-main:#d8d0c8;
+  --text-dim:#6b6068;
+  --toc-accent:#b89460;
+  --toc-line:rgba(184,148,96,.16);
+  /* 角色专属配色（与状态栏 KNOWN 同步） */
+  --c1:#c87a90;--c2:#e0a0c0;--c3:#a0a0d8;--c4:#e08858;--c5:#8ab0c8;
+  --c6:#d89858;--c7:#90a8c0;--c8:#b0a0c8;--c9:#c89878;--c10:#e0b060;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+.kcb-wrap{
+  position:relative;width:100%;
+  /* 用 aspect-ratio 控高，避免 vh 受宿主影响（前端界面规范） */
+  aspect-ratio:3/4;max-height:none;
+  color:var(--text-main);
+  font-family:"Noto Serif SC","Source Han Serif SC","SimSun",serif;
+  overflow:hidden;border-radius:12px;
+  border:1px solid rgba(200,164,92,.25);
+  box-shadow:0 8px 40px rgba(0,0,0,.5),inset 0 0 80px rgba(90,64,128,.05);
+  background:
+    radial-gradient(ellipse 40% 24% at 50% 46%,rgba(154,126,200,.05) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 30% at 50% 54%,rgba(200,164,92,.045) 0%,transparent 70%),
+    linear-gradient(175deg,#08060a,#0e0a11 50%,#0a0810);
+}
+@media(min-width:560px){.kcb-wrap{aspect-ratio:4/3}}
+
+/* 公共层 */
+.layer{
+  position:absolute;inset:0;width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:center;
+  overflow-y:auto;overflow-x:hidden;
+}
+.layer::-webkit-scrollbar{width:5px}
+.layer::-webkit-scrollbar-track{background:transparent}
+.layer::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--gold),var(--violet));border-radius:3px}
+
+/* ══════════════════════════════════════
+   Layer 1: 书封面
+   ══════════════════════════════════════ */
+.cover-layer{
+  z-index:10;justify-content:center;
+  padding:36px 26px;
+  transition:opacity 1s ease,transform 1s ease,filter 1s ease;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 40%,rgba(200,164,92,.06) 0%,transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% 50%,rgba(90,64,128,.06) 0%,transparent 75%),
+    linear-gradient(180deg,#0e0a11 0%,#0c0810 40%,#0e0a12 70%,#0a0810 100%);
+}
+.cover-layer.burning{
+  /* 燃烧时封面留在原地，由 JS 用 mask 逐步挖空（不再整体淡出/放大/替换） */
+  pointer-events:none;
+}
+
+.cover-border{
+  position:absolute;inset:18px;
+  border:1px solid rgba(200,164,92,.3);
+  pointer-events:none;
+  box-shadow:inset 0 0 60px rgba(90,64,128,.07),0 0 40px rgba(0,0,0,.4);
+}
+.cover-border::before{content:"";position:absolute;inset:6px;border:1px solid rgba(200,164,92,.10)}
+.cover-border .ornament{position:absolute;width:18px;height:18px;border:1px solid rgba(200,164,92,.45)}
+.cover-border .ornament.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.cover-border .ornament.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+.cover-border .ornament.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+.cover-border .ornament.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+.cover-content{position:relative;z-index:2;text-align:center;max-width:440px;margin:auto 0}
+
+.cover-sigil{width:42px;height:42px;margin:0 auto 20px}
+.cover-sigil svg{width:100%;height:100%;display:block;
+  filter:drop-shadow(0 0 8px rgba(200,164,92,.25));
+  animation:sigilFloat 6s ease-in-out infinite}
+@keyframes sigilFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+
+.cover-title{
+  font-size:clamp(28px,8vw,40px);font-weight:700;letter-spacing:9px;padding-left:9px;
+  background:linear-gradient(160deg,#e8d0a0 0%,#c8a45c 26%,#f0e0c0 48%,#b89bd0 60%,#c8a45c 74%,#a08040 100%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 16px rgba(200,164,92,.22)) drop-shadow(0 0 24px rgba(154,126,200,.12));
+  animation:titleSheen 9s ease-in-out infinite;margin-bottom:10px;
+}
+@keyframes titleSheen{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+
+.cover-subtitle{font-size:11px;color:var(--text-dim);letter-spacing:5px;margin-bottom:30px;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic}
+
+.cover-rule{position:relative;width:110px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim) 35%,var(--gold) 50%,var(--gold-dim) 65%,transparent);
+  margin:0 auto 26px}
+.cover-rule::after{content:"";position:absolute;top:50%;left:50%;width:5px;height:5px;
+  transform:translate(-50%,-50%) rotate(45deg);background:var(--gold);box-shadow:0 0 8px rgba(200,164,92,.5)}
+
+.cover-desc{font-size:13px;color:#9a9088;line-height:2.1;letter-spacing:1px;
+  margin-bottom:28px;max-width:360px;margin-left:auto;margin-right:auto}
+.cover-desc .em{color:var(--violet);opacity:.85}
+
+.cover-author{font-size:11px;color:rgba(200,164,92,.5);letter-spacing:4px;margin-bottom:34px;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic}
+.cover-author::before,.cover-author::after{content:"·";margin:0 10px;color:rgba(184,148,96,.3)}
+
+.cover-btn-wrap{position:relative}
+.cover-btn{
+  padding:13px 46px 13px 52px;font-family:inherit;font-size:14px;letter-spacing:6px;
+  background:transparent;color:var(--gold);
+  border:1px solid rgba(200,164,92,.4);cursor:pointer;
+  transition:all .45s ease;position:relative;overflow:hidden;border-radius:2px;
+}
+.cover-btn:hover{border-color:rgba(154,126,200,.7);
+  box-shadow:0 0 34px rgba(154,126,200,.18),inset 0 0 34px rgba(154,126,200,.07);
+  color:#e8d8f0;letter-spacing:7px}
+.cover-btn:active{transform:scale(.97)}
+.cover-btn::before{content:"";position:absolute;inset:0;z-index:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(154,126,200,.10) 50%,transparent 70%);
+  transform:translateX(-120%);transition:transform .6s ease}
+.cover-btn:hover::before{transform:translateX(120%)}
+.cover-btn span{position:relative;z-index:1}
+
+/* 燃烧纸张 Canvas（真实燃烧效果：焦化→炭化→消失） */
+#burn-paper-canvas{position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:11;display:none}
+/* 火焰粒子 Canvas（绝对定位覆盖层） */
+#fire-canvas{position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:15;display:none;opacity:1;
+  transition:opacity .7s ease}
+
+/* ══════════════════════════════════════
+   Layer 2: 目录
+   ══════════════════════════════════════ */
+.toc-layer{
+  z-index:5;padding:30px 24px 28px;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% -5%,rgba(200,164,92,.035) 0%,transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 110%,rgba(90,64,128,.06) 0%,transparent 60%),
+    linear-gradient(180deg,#08060a,#0e0a12 50%,#0a0810);
+  opacity:0;transition:opacity 1s ease;pointer-events:none;
+}
+.toc-layer.shown{opacity:1;pointer-events:auto}
+
+/* 目录内边框（解决"没有边框"） */
+.toc-frame{
+  width:100%;max-width:600px;margin:auto 0;
+  border:1px solid rgba(200,164,92,.22);border-radius:8px;
+  padding:26px 24px 22px;position:relative;
+  background:linear-gradient(160deg,rgba(200,164,92,.025),rgba(154,126,200,.02) 60%,transparent);
+  box-shadow:inset 0 0 50px rgba(90,64,128,.05);
+}
+.toc-frame::before{content:"";position:absolute;inset:5px;
+  border:1px solid rgba(200,164,92,.08);pointer-events:none;border-radius:5px}
+.toc-frame .corner{position:absolute;width:14px;height:14px;border:1px solid rgba(154,126,200,.4)}
+.toc-frame .corner.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.toc-frame .corner.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+.toc-frame .corner.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+.toc-frame .corner.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+.toc-header{margin-bottom:24px;text-align:center}
+.toc-eyebrow{font-size:10px;letter-spacing:5px;color:rgba(154,126,200,.45);margin-bottom:10px;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic}
+.toc-title{font-size:24px;font-weight:600;letter-spacing:12px;padding-left:12px;
+  background:linear-gradient(150deg,#d8b878,var(--gold) 50%,#b89bd0 90%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:10px;filter:drop-shadow(0 0 10px rgba(200,164,92,.18))}
+.toc-rule{position:relative;width:70px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:0 auto}
+.toc-rule::after{content:"";position:absolute;top:50%;left:50%;width:4px;height:4px;
+  transform:translate(-50%,-50%) rotate(45deg);background:var(--gold)}
+
+.toc-list{width:100%}
+
+.toc-item{
+  position:relative;display:flex;align-items:baseline;padding:10px 8px 10px 0;cursor:pointer;
+  border-bottom:1px solid var(--toc-line);transition:all .35s cubic-bezier(.4,0,.2,1);
+  font-size:14px;letter-spacing:1px;color:var(--text-dim);
+}
+.toc-item::before{content:"";position:absolute;left:0;top:-1px;bottom:-1px;width:0;
+  background:
+    radial-gradient(circle at 3% 50%,rgba(90,64,128,.14) 0%,rgba(154,126,200,.08) 14%,rgba(154,126,200,.03) 38%,transparent 65%),
+    radial-gradient(ellipse 200% 100% at 0% 50%,rgba(90,64,128,.07) 0%,rgba(154,126,200,.02) 30%,transparent 58%);
+  transition:width .6s cubic-bezier(.33,0,.2,1);z-index:0;border-radius:0 50% 50% 0}
+.toc-item::after{content:"";position:absolute;left:-2px;top:50%;transform:translateY(-50%) scaleY(0);
+  width:3px;height:65%;border-radius:2px;
+  background:linear-gradient(180deg,var(--chap-color,var(--violet)),var(--chap-color,var(--violet)));
+  box-shadow:
+    0 0 8px var(--chap-color,var(--violet)),
+    0 0 18px var(--chap-color,rgba(154,126,200,.5)),
+    0 0 3px rgba(255,255,255,.12);
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+.toc-item:hover{color:var(--gold-bright);padding-left:12px}
+.toc-item:hover::before{width:100%}
+.toc-item:hover::after{transform:translateY(-50%) scaleY(1)}
+.toc-item:hover .chap-num{color:var(--violet)}
+.toc-item:hover .chap-page{color:var(--violet);text-shadow:0 0 8px var(--violet-glow)}
+.toc-item:hover .chap-dots{color:rgba(154,126,200,.4)}
+.toc-item>*{position:relative;z-index:1}
+.toc-item .chap-num{flex-shrink:0;width:70px;color:var(--toc-accent);font-weight:500;transition:color .35s}
+.toc-item .chap-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toc-item .chap-name .sub{font-size:11px;color:rgba(154,126,200,.45);margin-left:6px;letter-spacing:0}
+.toc-item:hover .chap-name .sub{color:rgba(200,104,120,.7)}
+.toc-item .chap-dots{flex-shrink:0;overflow:hidden;white-space:nowrap;
+  color:rgba(184,148,96,.26);letter-spacing:2px;padding:0 8px;transition:color .35s}
+.toc-item .chap-page{flex-shrink:0;width:32px;text-align:right;color:var(--toc-accent);
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:16px;
+  transition:color .35s,text-shadow .35s}
+
+/* ── 精致 FINIS 分隔线 ── */
+.toc-sep{display:flex;align-items:center;gap:0;margin:24px 0 6px;position:relative}
+.toc-sep .fl{flex:1;position:relative}
+.toc-sep .fl::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(154,126,200,.28),transparent,rgba(154,126,200,.28))}
+.toc-sep .fl::after{content:"";position:absolute;left:0;right:0;top:5px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(154,126,200,.14),transparent,rgba(154,126,200,.14))}
+.toc-sep .fd{width:14px;height:14px;flex-shrink:0;margin:0 8px;
+  filter:drop-shadow(0 0 5px rgba(154,126,200,.35)) drop-shadow(0 0 10px rgba(154,126,200,.15));
+  animation:fdGlow 4s ease-in-out infinite}
+@keyframes fdGlow{0%,100%{filter:drop-shadow(0 0 4px rgba(154,126,200,.3)) drop-shadow(0 0 8px rgba(154,126,200,.1))}
+  50%{filter:drop-shadow(0 0 7px rgba(154,126,200,.5)) drop-shadow(0 0 14px rgba(154,126,200,.2))}}
+.toc-sep .ft{font-size:10px;letter-spacing:6px;color:rgba(154,126,200,.55);
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+  text-shadow:0 0 10px rgba(154,126,200,.25),0 0 2px rgba(200,164,92,.1);margin:0 6px}
+.toc-item.special{padding:14px 8px 14px 0}
+.toc-item.special .chap-name{font-weight:500;color:var(--toc-accent)}
+.toc-item.special:hover .chap-name{color:var(--gold-bright)}
+
+.toc-footer{margin-top:26px;text-align:center;font-size:11px;color:rgba(107,96,104,.45);letter-spacing:3px;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic}
+.toc-foot-orn{width:40px;height:1px;margin:0 auto 10px;
+  background:linear-gradient(90deg,transparent,rgba(200,164,92,.15),transparent)}
+
+/* ══════════════════════════════════════
+   目录页装饰增强
+   ══════════════════════════════════════ */
+
+/* ── 古书页纹理 ── */
+.toc-layer::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 26px,rgba(200,164,92,.012) 26px,rgba(200,164,92,.012) 27px),
+    repeating-linear-gradient(90deg,transparent,transparent 26px,rgba(200,164,92,.007) 26px,rgba(200,164,92,.007) 27px);
+  opacity:.65;
+}
+.toc-frame::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:8px;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%,rgba(200,164,92,.02) 0%,transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 70%,rgba(154,126,200,.02) 0%,transparent 50%);
+  animation:pageParchment 12s ease-in-out infinite alternate;
+}
+@keyframes pageParchment{0%{opacity:.6}100%{opacity:1}}
+
+/* ── 目录标题印章 ── */
+.toc-seal{width:24px;height:24px;margin:8px auto 0;opacity:.45;
+  animation:sealSpin 24s linear infinite}
+@keyframes sealSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+/* ── 悬浮粒子（灰尘/萤火虫）── */
+.toc-particles{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+.toc-particle{
+  position:absolute;border-radius:50%;
+  width:var(--sz,2px);height:var(--sz,2px);
+  background:rgba(200,164,92,.4);
+  box-shadow:0 0 4px rgba(200,164,92,.25),0 0 8px rgba(200,164,92,.1);
+  animation:tocFloat var(--dur,12s) var(--del,0s) ease-in-out infinite;
+}
+.toc-particle.ember{
+  background:rgba(154,126,200,.5);
+  box-shadow:0 0 5px rgba(154,126,200,.3),0 0 10px rgba(154,126,200,.15);
+}
+@keyframes tocFloat{
+  0%,100%{opacity:0;transform:translate(0,0)}
+  12%{opacity:.65}
+  50%{opacity:.35;transform:translate(var(--dx,10px),var(--dy,-40px))}
+  88%{opacity:.55}
+}
+
+/* ── 墨水晕染 ── */
+.toc-ink{
+  position:absolute;pointer-events:none;z-index:0;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(90,64,128,.055),rgba(154,126,200,.025) 40%,transparent 70%);
+  animation:inkPulse 10s ease-in-out infinite;
+}
+@keyframes inkPulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:.75;transform:scale(1.1)}}
+
+/* ── 章节纹章图标 ── */
+.chap-sigil{
+  flex-shrink:0;width:20px;height:20px;margin-right:2px;
+  opacity:.3;transition:opacity .4s ease,filter .4s ease,transform .4s ease;
+  filter:drop-shadow(0 0 2px rgba(200,164,92,.06));
+}
+.toc-item:hover .chap-sigil{
+  opacity:.88;
+  filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 14px rgba(200,164,92,.35));
+  transform:scale(1.12);
+}
+
+/* ── hover 墨迹扩散层 ── */
+.toc-item .ink-spread{
+  position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:2px;
+  background:
+    radial-gradient(ellipse 130% 100% at 0% 50%,rgba(90,64,128,.11) 0%,rgba(154,126,200,.05) 32%,transparent 70%),
+    radial-gradient(ellipse 50% 80% at 3% 50%,rgba(90,64,128,.07) 0%,transparent 100%);
+  opacity:0;transform:scaleX(.28);transform-origin:left center;
+  transition:opacity .55s ease,transform .65s cubic-bezier(.33,0,.2,1);
+}
+.toc-item:hover .ink-spread{opacity:1;transform:scaleX(1)}
+
+/* ── 页码花纹 ── */
+.chap-page{position:relative}
+.chap-page::before,.chap-page::after{
+  content:"";position:absolute;top:50%;width:10px;height:1px;
+  opacity:0;transition:opacity .4s ease,width .4s ease;
+}
+.chap-page::before{right:100%;margin-right:4px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim));
+  box-shadow:-1px 0 4px rgba(200,164,92,.18)}
+.chap-page::after{left:100%;margin-left:4px;
+  background:linear-gradient(90deg,var(--gold-dim),transparent);
+  box-shadow:1px 0 4px rgba(200,164,92,.18)}
+.toc-item:hover .chap-page::before,.toc-item:hover .chap-page::after{
+  opacity:.6;width:14px;
+}
+
+@media(max-width:560px){
+  .cover-content{max-width:100%}
+  .toc-title{font-size:20px;letter-spacing:7px;padding-left:7px}
+  .toc-frame{padding:22px 16px 18px}
+  .toc-item{font-size:13px}
+  .toc-item .chap-num{width:58px}
+  .toc-item .chap-page{font-size:14px;width:26px}
+  .toc-item .chap-name .sub{display:none}
+  .chap-sigil{width:14px;height:14px;opacity:.22}
+  .toc-item:hover .chap-sigil{opacity:.65;transform:scale(1.08)}
+  .toc-seal{width:18px;height:18px}
+  .toc-particle{display:none}
+  .toc-ink{opacity:.22}
+  .toc-item::before{background:
+    radial-gradient(circle at 3% 50%,rgba(90,64,128,.06),transparent 55%)}
+  .toc-item .ink-spread{background:
+    radial-gradient(ellipse at 0% 50%,rgba(90,64,128,.05),transparent 55%)}
+  .toc-sep .fd{width:12px;height:12px}
+  .toc-sep .ft{font-size:9px;letter-spacing:4px}
+}
+/* ── 返回封面按钮 ── */
+.toc-back{position:absolute;top:10px;right:14px;cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-dim);border:1px solid rgba(200,164,92,.3);transition:all .3s;z-index:2;}
+.toc-back:hover{color:var(--gold-bright);border-color:rgba(154,126,200,.7);background:rgba(154,126,200,.1);box-shadow:0 0 12px rgba(154,126,200,.2);}/* ── 交互粒子画布 ── */
+.kcb-particles-canvas{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  /* 置于封面(10)与目录(5)之上，使两个页面都能看到光标粒子；
+     pointer-events:none 不影响封面按钮点击 */
+  pointer-events:none;z-index:20;
+}
+</style></head><body>
+<div class="kcb-wrap">
+
+<!-- ═══════════ Layer 2: 目录 ═══════════ -->
+<div class="layer toc-layer" id="toc-layer">
+  <div class="toc-frame"><div class="toc-back" id="toc-back" title="返回封面">&#10005;</div>
+    <span class="corner tl"></span><span class="corner tr"></span>
+    <span class="corner bl"></span><span class="corner br"></span>
+    <div class="toc-header">
+      <div class="toc-eyebrow">THE KITE NEVER RETURNS</div>
+      <div class="toc-title">目 录</div>
+      <div class="toc-rule"></div>
+      <div class="toc-seal"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="rgba(200,164,92,.25)" stroke-width=".8"/><path d="M12 6L14 12L12 18L10 12Z" stroke="rgba(154,126,200,.3)" stroke-width=".7"/><circle cx="12" cy="12" r="2" fill="rgba(154,126,200,.2)"/></svg></div>
+    </div>
+    <!-- 悬浮粒子（灰尘/萤火虫光点） -->
+    <div class="toc-particles">
+      <span class="toc-particle" style="left:8%;top:18%;--dur:15s;--del:0s;--dx:18px;--dy:-55px;--sz:2px"></span>
+      <span class="toc-particle" style="left:22%;top:72%;--dur:12s;--del:2s;--dx:-14px;--dy:-40px;--sz:1.5px"></span>
+      <span class="toc-particle" style="left:55%;top:12%;--dur:14s;--del:4s;--dx:10px;--dy:-48px;--sz:2px"></span>
+      <span class="toc-particle" style="left:78%;top:45%;--dur:13s;--del:1s;--dx:-16px;--dy:-35px;--sz:1.8px"></span>
+      <span class="toc-particle" style="left:40%;top:85%;--dur:16s;--del:3s;--dx:12px;--dy:-60px;--sz:2.2px"></span>
+      <span class="toc-particle" style="left:90%;top:25%;--dur:11s;--del:5s;--dx:-8px;--dy:-42px;--sz:1.5px"></span>
+      <span class="toc-particle" style="left:65%;top:68%;--dur:17s;--del:2.5s;--dx:15px;--dy:-50px;--sz:2px"></span>
+      <span class="toc-particle ember" style="left:15%;top:40%;--dur:10s;--del:6s;--dx:5px;--dy:-30px;--sz:3px"></span>
+      <span class="toc-particle ember" style="left:82%;top:78%;--dur:14s;--del:8s;--dx:-10px;--dy:-45px;--sz:2.5px"></span>
+    </div>
+    <!-- 墨水晕染 -->
+    <div class="toc-ink" style="width:140px;height:100px;left:3%;top:10%;animation-delay:0s"></div>
+    <div class="toc-ink" style="width:180px;height:120px;right:5%;top:50%;animation-delay:3s"></div>
+    <div class="toc-ink" style="width:120px;height:80px;left:30%;top:80%;animation-delay:5s"></div>
+    <div class="toc-ink" style="width:100px;height:90px;right:20%;top:5%;animation-delay:7s;opacity:.3"></div>
+    <div class="toc-list" id="toc-list"></div>
+    <div class="toc-footer"><div class="toc-foot-orn"></div>沉鸢不归 · aabbcc</div>
+  </div>
+</div>
+
+<!-- ═══════════ Layer 1: 书封面 ═══════════ -->
+<div class="layer cover-layer" id="cover-layer">
+  <div class="cover-border">
+    <span class="ornament tl"></span><span class="ornament tr"></span>
+    <span class="ornament bl"></span><span class="ornament br"></span>
+  </div>
+  <div class="cover-content">
+    <div class="cover-sigil">
+      <svg viewBox="0 0 48 60" fill="none">
+        <path d="M24 4 L40 24 L24 44 L8 24 Z" stroke="url(#sg)" stroke-width="1.2"/>
+        <path d="M24 4 L24 44 M8 24 L40 24" stroke="url(#sg)" stroke-width=".7" opacity=".6"/>
+        <path d="M24 44 L20 60 M24 44 L28 60" stroke="url(#sg)" stroke-width=".7" opacity=".35"/>
+        <circle cx="24" cy="24" r="2.4" fill="#9a7ec8"/>
+        <defs><linearGradient id="sg" x1="8" y1="4" x2="40" y2="44">
+          <stop offset="0" stop-color="#e8d0a0"/><stop offset=".55" stop-color="#c8a45c"/>
+          <stop offset="1" stop-color="#9a7ec8"/></linearGradient></defs>
+      </svg>
+    </div>
+    <div class="cover-title">沉鸢不归</div>
+    <div class="cover-subtitle">THE KITE NEVER RETURNS</div>
+    <div class="cover-rule"></div>
+    <div class="cover-desc">
+      绝世美貌的伪娘<span class="em">沈鸢</span>，以女性身份游走于十位炮友之间。<br>
+      她们各有男友，却都沉溺于他的身体无法自拔。<br>
+      这是一场光天化日之下的<span class="em">NTR游戏</span>，<br>
+      无人知晓，无人能逃。
+    </div>
+    <div class="cover-author">aabbcc</div>
+    <div class="cover-btn-wrap">
+      <button class="cover-btn" id="cover-btn"><span>翻 开 书 页</span></button>
+    </div>
+  </div>
+</div>
+
+<canvas id="burn-paper-canvas"></canvas>
+<canvas class="kcb-particles-canvas" id="kcb-particles-canvas"></canvas>
+<canvas id="fire-canvas"></canvas>
+
+</div>
+
+<script>
+$(function(){
+
+/* ── 开场白数据 ── */
+var openers=[
+  {num:1, name:'闻浅', sub:'青梅之约', swipe:1, color:'#c87a90'},
+  {num:2, name:'安樱', sub:'天然沉溺', swipe:2, color:'#e0a0c0'},
+  {num:3, name:'颜絮', sub:'珍贵渴望', swipe:3, color:'#a0a0d8'},
+  {num:4, name:'姜野', sub:'认输不认账', swipe:4, color:'#e08858'},
+  {num:5, name:'苏小眠', sub:'胆怯深爱', swipe:5, color:'#8ab0c8'},
+  {num:6, name:'凌千夏', sub:'傲娇深陷', swipe:6, color:'#d89858'},
+  {num:7, name:'宋薄寒', sub:'冰冷消融', swipe:7, color:'#90a8c0'},
+  {num:8, name:'裴寒露', sub:'暗藏渴望', swipe:8, color:'#b0a0c8'},
+  {num:9, name:'乔晚', sub:'隐秘偏爱', swipe:9, color:'#c89878'},
+  {num:10, name:'时染', sub:'禁忌初尝', swipe:10, color:'#e0b060'}
+];
+var specials=[
+  {label:'游乐园人偶服隐奸', name:'游乐园人偶服隐奸', swipe:11},
+  {label:'NTR游戏之夜', name:'NTR游戏之夜', swipe:12}
+];
+
+/* ── 生成目录 ── */
+var tocList=$('#toc-list');
+var sigilSvg='<svg class="chap-sigil" viewBox="0 0 20 20" fill="none" style="color:var(--chap-color,var(--gold))">'
+    +'<path d="M10 1.5L17.5 10L10 18.5L2.5 10Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>'
+    +'<path d="M10 1.5L10 18.5" stroke="currentColor" stroke-width=".4" opacity=".3"/>'
+    +'<circle cx="10" cy="10" r="2" fill="currentColor" opacity=".65"/>'
+    +'<circle cx="10" cy="10" r=".9" fill="rgba(232,208,160,.3)"/></svg>';
+for(var i=0;i<openers.length;i++){
+  var o=openers[i];
+  var dots=''; for(var d=0;d<30-(o.name.length+o.sub.length);d++) dots+='.';
+  tocList.append('<div class="toc-item" data-swipe="'+o.swipe+'" style="--chap-color:'+o.color+'">'
+    +'<div class="ink-spread"></div>'
+    +sigilSvg
+    +'<span class="chap-num">第'+o.num+'章</span>'
+    +'<span class="chap-name">'+o.name+'<span class="sub">'+o.sub+'</span></span>'
+    +'<span class="chap-dots">'+dots+'</span>'
+    +'<span class="chap-page">'+o.num+'</span></div>');
+}
+var fdSvg='<svg viewBox="0 0 14 14" fill="none"><path d="M7 .5L13 7L7 13.5L1 7Z" stroke="rgba(154,126,200,.5)" stroke-width="1" stroke-linejoin="round"/><path d="M7 .5L7 13.5" stroke="rgba(154,126,200,.22)" stroke-width=".4"/><circle cx="7" cy="7" r="1.5" fill="rgba(154,126,200,.32)"/><circle cx="7" cy="7" r=".55" fill="rgba(200,164,92,.18)"/></svg>';
+tocList.append('<div class="toc-sep"><span class="fl"></span><span class="fd">'+fdSvg+'</span><span class="ft">FINIS</span><span class="fd">'+fdSvg+'</span><span class="fl"></span></div>');
+for(var j=0;j<specials.length;j++){
+  var s=specials[j];
+  var dots=''; for(var d=0;d<34-(s.label.length+s.name.length);d++) dots+='.';
+  tocList.append('<div class="toc-item special" data-swipe="'+s.swipe+'">'
+    +'<div class="ink-spread"></div>'
+    +'<span class="chap-name">'+s.label+'<span class="sub">'+s.name+'</span></span>'
+    +'<span class="chap-dots">'+dots+'</span>'
+    +'<span class="chap-page">'+s.swipe+'</span></div>');
+}
+
+/* ═══════════════════════════════════════════
+   真实纸张燃烧系统 — 右下角点燃 → 有机噪声蔓延
+   → 焦化(褐) → 炭化(黑) → 消失 → 目录浮现
+   → 多层火焰粒子 + 余烬 + 烟雾 + 桌面光照
+   ═══════════════════════════════════════════ */
+
+/* ── 噪声函数（有机燃烧边缘）── */
+function hash2D(x,y){ var n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); }
+function noise2D(x,y){
+  var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy;
+  fx=fx*fx*(3-2*fx); fy=fy*fy*(3-2*fy);
+  var a=hash2D(ix,iy),b=hash2D(ix+1,iy),c=hash2D(ix,iy+1),d=hash2D(ix+1,iy+1);
+  return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy;
+}
+function fbm2D(x,y,octaves){
+  var v=0,amp=1,freq=1,tot=0;
+  for(var i=0;i<octaves;i++){ v+=amp*noise2D(x*freq,y*freq); tot+=amp; amp*=0.5; freq*=2; }
+  return v/tot;
+}
+
+/* ── 画布引用 ── */
+var fireCanvas=document.getElementById('fire-canvas');
+var fireCtx=fireCanvas.getContext('2d');
+var burnPaperCanvas=document.getElementById('burn-paper-canvas');
+var burnPaperCtx=burnPaperCanvas.getContext('2d');
+
+/* ── 离屏画布 ── */
+var coverCache=document.createElement('canvas');
+var coverCacheCtx=coverCache.getContext('2d');
+var burnMaskCanvas=document.createElement('canvas');
+var burnMaskCtx=burnMaskCanvas.getContext('2d');
+
+var coverLayer=$('#cover-layer'),tocLayer=$('#toc-layer'),coverBtn=$('#cover-btn');
+
+/* ── 燃烧网格 ── */
+var GRID_W=150, GRID_H=210;
+var burnGrid;     /* Float32Array[GRID_W*GRID_H], 0=完好, 1=烧尽 */
+var burnActive=false, burnDone=false, burnStartTime=0, burnStarted=false;
+var burnCooling=false;/* 冷却阶段：已停止蔓延，正在让火焰/余烬/灰烬自然消散 */
+var burnRun=0;        /* 运行代号：每次启动+1，旧定时器据此作废，防止重连抢先 */
+var burnTimers=[];    /* 本次运行挂起的 setTimeout 句柄，reset/end 时统一清除 */
+var BURN_DELAY=2000;   /* 点击后 2s 点燃 */
+var BURN_DURATION=5000;/* 点燃后约 5s 内烧尽整张封面 */
+
+/* 取消本次运行所有挂起定时器 */
+function clearBurnTimers(){
+  for(var i=0;i<burnTimers.length;i++) clearTimeout(burnTimers[i]);
+  burnTimers=[];
+}
+/* 登记一个带运行代号校验的定时器：代号过期则不执行 */
+function scheduleBurn(fn,delay,myRun){
+  var id=setTimeout(function(){
+    if(myRun!==burnRun) return;   /* 已被 reset/重启 → 这条时间线作废 */
+    fn();
+  },delay);
+  burnTimers.push(id);
+  return id;
+}
+
+/* ── 粒子（火焰 / 余烬 / 烟雾 / 灰烬碎片）── */
+var flames=[], embers=[], smokes=[], ashes=[];
+var FLAME_MAX=500, EMBER_MAX=180, SMOKE_MAX=70, ASH_MAX=40;
+
+function rnd(a,b){ return a+Math.random()*(b-a); }
+
+function resizeFire(){
+  var r=fireCanvas.parentNode.getBoundingClientRect();
+  fireCanvas.width=r.width; fireCanvas.height=r.height;
+}
+function resizeBurnPaper(){
+  var r=burnPaperCanvas.parentNode.getBoundingClientRect();
+  burnPaperCanvas.width=r.width; burnPaperCanvas.height=r.height;
+}
+resizeFire(); resizeBurnPaper();
+$(window).on('resize',function(){ resizeFire(); resizeBurnPaper(); });
+
+/* ══════════════════════════════════════
+   封面 → Canvas 预渲染（暗色原版封面，非泛黄纸张）
+   ══════════════════════════════════════ */
+function renderCoverToCache(){
+  var W=burnPaperCanvas.width, H=burnPaperCanvas.height;
+  if(W<10||H<10){ W=400; H=533; }
+  coverCache.width=W; coverCache.height=H;
+  var ctx=coverCacheCtx;
+
+  /* 暗色背景 — 与 .cover-layer CSS 一致 */
+  var bgGrad=ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,'#0e0a11'); bgGrad.addColorStop(0.4,'#0c0810');
+  bgGrad.addColorStop(0.7,'#0e0a12'); bgGrad.addColorStop(1,'#0a0810');
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+
+  /* 径向光晕（金色） */
+  var glow1=ctx.createRadialGradient(W*.5,H*.4,0,W*.5,H*.4,W*.5);
+  glow1.addColorStop(0,'rgba(200,164,92,.06)'); glow1.addColorStop(1,'transparent');
+  ctx.fillStyle=glow1; ctx.fillRect(0,0,W,H);
+
+  /* 径向光晕（紫色） */
+  var glow2=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H)*.45);
+  glow2.addColorStop(0,'rgba(90,64,128,.06)'); glow2.addColorStop(1,'transparent');
+  ctx.fillStyle=glow2; ctx.fillRect(0,0,W,H);
+
+  /* 金边中框 */
+  var m=Math.min(W,H)*.045;
+  ctx.strokeStyle='rgba(200,164,92,.3)'; ctx.lineWidth=1;
+  ctx.strokeRect(m,m,W-m*2,H-m*2);
+  /* 内框 */
+  ctx.strokeStyle='rgba(200,164,92,.1)'; ctx.lineWidth=.7;
+  ctx.strokeRect(m+6,m+6,W-(m+6)*2,H-(m+6)*2);
+
+  /* 角饰（L形） */
+  var orn=Math.min(W,H)*.032;
+  ctx.strokeStyle='rgba(200,164,92,.45)'; ctx.lineWidth=1;
+  function ornDraw(x,y,dx,dy){
+    ctx.beginPath(); ctx.moveTo(x,y+dy); ctx.lineTo(x,y); ctx.lineTo(x+dx,y); ctx.stroke();
+  }
+  ornDraw(m,m,orn,orn); ornDraw(W-m,m,-orn,orn);
+  ornDraw(m,H-m,orn,-orn); ornDraw(W-m,H-m,-orn,-orn);
+
+  /* 纹章（菱形，与cover-sigil SVG近似） */
+  var cx=W/2, sigY=H*.12, sigSz=Math.min(W,H)*.07;
+  ctx.save(); ctx.translate(cx,sigY+sigSz/2);
+  var sigGrad=ctx.createLinearGradient(-sigSz*.45,-sigSz*.75,sigSz*.45,sigSz*.75);
+  sigGrad.addColorStop(0,'#e8d0a0'); sigGrad.addColorStop(.55,'#c8a45c'); sigGrad.addColorStop(1,'#9a7ec8');
+  ctx.strokeStyle=sigGrad; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(0,-sigSz*.75); ctx.lineTo(sigSz*.45,0);
+  ctx.lineTo(0,sigSz*.75); ctx.lineTo(-sigSz*.45,0); ctx.closePath(); ctx.stroke();
+  ctx.strokeStyle='rgba(200,164,92,.3)'; ctx.lineWidth=.5;
+  ctx.beginPath(); ctx.moveTo(0,-sigSz*.75); ctx.lineTo(0,sigSz*.75);
+  ctx.moveTo(-sigSz*.45,0); ctx.lineTo(sigSz*.45,0); ctx.stroke();
+  ctx.fillStyle='#9a7ec8'; ctx.beginPath(); ctx.arc(0,0,sigSz*.12,0,6.2832); ctx.fill();
+  ctx.restore();
+
+  /* 标题 — 金色渐变，与 cover-title CSS 一致 */
+  var titleY=sigY+sigSz+H*.035;
+  var titleFontSize=Math.round(W*.08);
+  ctx.font='700 '+titleFontSize+'px "Noto Serif SC","SimSun","KaiTi",serif';
+  ctx.textAlign='center';
+  var titleW=ctx.measureText('沉鸢不归').width;
+  var titleGrad=ctx.createLinearGradient(cx-titleW*.5,titleY,cx+titleW*.5,titleY);
+  titleGrad.addColorStop(0,'#e8d0a0'); titleGrad.addColorStop(.26,'#c8a45c');
+  titleGrad.addColorStop(.48,'#f0e0c0'); titleGrad.addColorStop(.6,'#b89bd0');
+  titleGrad.addColorStop(.74,'#c8a45c'); titleGrad.addColorStop(1,'#a08040');
+  ctx.fillStyle=titleGrad;
+  ctx.fillText('沉鸢不归',cx,titleY);
+
+  /* 副标题 */
+  var subY=titleY+H*.04;
+  ctx.fillStyle='#6b6068';
+  ctx.font='italic 500 '+Math.round(W*.024)+'px "Cormorant Garamond",Georgia,serif';
+  ctx.fillText('THE KITE NEVER RETURNS',cx,subY);
+
+  /* 装饰线 */
+  var ruleY=subY+H*.045, ruleW=W*.22;
+  var ruleGrad=ctx.createLinearGradient(cx-ruleW/2,0,cx+ruleW/2,0);
+  ruleGrad.addColorStop(0,'transparent'); ruleGrad.addColorStop(.35,'rgba(122,95,48,.6)');
+  ruleGrad.addColorStop(.5,'#c8a45c'); ruleGrad.addColorStop(.65,'rgba(122,95,48,.6)');
+  ruleGrad.addColorStop(1,'transparent');
+  ctx.strokeStyle=ruleGrad; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx-ruleW/2,ruleY); ctx.lineTo(cx+ruleW/2,ruleY); ctx.stroke();
+  ctx.save(); ctx.translate(cx,ruleY); ctx.rotate(Math.PI/4);
+  var dSz=Math.min(W,H)*.009;
+  ctx.fillStyle='#c8a45c'; ctx.fillRect(-dSz/2,-dSz/2,dSz,dSz); ctx.restore();
+
+  /* 描述文字 — 与 cover-desc HTML 一致 */
+  var descY=ruleY+H*.055;
+  var descFontSize=Math.round(W*.026);
+  ctx.font=descFontSize+'px "Noto Serif SC","SimSun",serif';
+  ctx.textAlign='center';
+  var descLineH=descFontSize*2.1;
+  var descLines=[
+    {text:'绝世美貌的伪娘',color:'#9a9088'},
+    {text:'沈鸢',color:'rgba(154,126,200,.85)'},
+    {text:'，以女性身份游走于十位炮友之间。',color:'#9a9088'}
+  ];
+  /* 逐词绘制，模拟 HTML 中的 <span class="em"> */
+  function drawDescLine(y,segments){
+    var totalW=0;
+    for(var si=0;si<segments.length;si++) totalW+=ctx.measureText(segments[si].text).width;
+    var curX=cx-totalW/2;
+    for(var si=0;si<segments.length;si++){
+      ctx.fillStyle=segments[si].color;
+      ctx.textAlign='left';
+      ctx.fillText(segments[si].text,curX,y);
+      curX+=ctx.measureText(segments[si].text).width;
+    }
+    ctx.textAlign='center';
+  }
+  drawDescLine(descY,[
+    {text:'绝世美貌的伪娘',color:'#9a9088'},
+    {text:'沈鸢',color:'rgba(154,126,200,.85)'},
+    {text:'，以女性身份游走于十位炮友之间。',color:'#9a9088'}
+  ]);
+  drawDescLine(descY+descLineH,[
+    {text:'她们各有男友，却都沉溺于他的身体无法自拔。',color:'#9a9088'}
+  ]);
+  drawDescLine(descY+descLineH*2,[
+    {text:'这是一场光天化日之下的',color:'#9a9088'},
+    {text:'NTR游戏',color:'rgba(154,126,200,.85)'},
+    {text:'，',color:'#9a9088'}
+  ]);
+  drawDescLine(descY+descLineH*3,[
+    {text:'无人知晓，无人能逃。',color:'#9a9088'}
+  ]);
+
+  /* 署名 */
+  var authorY=H*.82;
+  ctx.fillStyle='rgba(200,164,92,.5)';
+  ctx.font='italic 500 '+Math.round(W*.024)+'px "Cormorant Garamond",Georgia,serif';
+  ctx.fillText('· aabbcc ·',cx,authorY);
+}
+
+/* ══════════════════════════════════════
+   燃烧蔓延 — 基于噪声的有机边缘
+   ══════════════════════════════════════ */
+var burnThreshold;  /* 每格的燃烧到达阈值[0,1]：右下角≈0最先烧，左上角≈1最后烧 */
+
+/* 预计算确定性燃烧阈值：以右下角为火源，距离+噪声 → 有机火线 */
+function computeBurnThresholds(){
+  burnThreshold=new Float32Array(GRID_W*GRID_H);
+  var maxd=0, i;
+  /* 第一遍：距离场（UV空间，火源在右下角(1,1)）+ 噪声扰动 */
+  for(var row=0;row<GRID_H;row++){
+    for(var col=0;col<GRID_W;col++){
+      var u=col/(GRID_W-1), v=row/(GRID_H-1);
+      var du=1-u, dv=1-v;
+      var dist=Math.sqrt(du*du+dv*dv);                 /* 0(角)→~1.414(对角) */
+      var n=fbm2D(col*.06, row*.06, 4);                /* 有机扰动 */
+      var t=dist + (n-.5)*.42;                         /* 噪声让火线不规则 */
+      if(t<0) t=0;
+      burnThreshold[row*GRID_W+col]=t;
+      if(t>maxd) maxd=t;
+    }
+  }
+  /* 第二遍：归一化到[0,1]，保证最后一格阈值=1 → p=1时必定烧尽 */
+  if(maxd<=0) maxd=1;
+  for(i=0;i<burnThreshold.length;i++) burnThreshold[i]/=maxd;
+}
+
+function initBurnGrid(){
+  burnGrid=new Float32Array(GRID_W*GRID_H);
+  computeBurnThresholds();
+  burnDone=false; burnActive=false; burnStarted=false; burnCooling=false;
+  flames=[]; embers=[]; smokes=[]; ashes=[];
+}
+
+function igniteCell(col,row,val){
+  if(col<0||col>=GRID_W||row<0||row>=GRID_H) return;
+  var idx=row*GRID_W+col;
+  if(burnGrid[idx]<=0) burnGrid[idx]=val||.012;
+}
+
+/* 确定性燃烧：全局进度 p∈[0,1] 在 BURN_DURATION 内匀速走完，
+   每格燃烧度 = (火线位置 - 该格阈值)/前沿宽度，p=1 时全部=1 必定烧尽。
+   时长由 BURN_DURATION 精确控制，不靠概率、不留死角、不需强停。 */
+var BURN_FRONT=0.16;   /* 火焰前沿宽度（占总进度比例）：越小火线越锐利 */
+function updateBurnGrid(dt){
+  if(!burnActive||!burnThreshold) return;
+  var elapsed=performance.now()-burnStartTime;
+  /* 火线推进到 1+BURN_FRONT，确保阈值=1 的格子也能烧到满 */
+  var p=Math.min(1, elapsed/BURN_DURATION)*(1+BURN_FRONT);
+
+  for(var i=0;i<burnGrid.length;i++){
+    var b=(p-burnThreshold[i])/BURN_FRONT;   /* 火线扫过该格的进度 */
+    if(b<0) b=0; else if(b>1) b=1;
+    if(b>burnGrid[i]) burnGrid[i]=b;          /* 只增不减，单调烧穿 */
+  }
+}
+
+/* ══════════════════════════════════════
+   粒子系统 — 火焰 / 余烬 / 烟雾
+   ══════════════════════════════════════ */
+function gridToScreen(col,row){
+  return {
+    x: (col+.5)/GRID_W*burnPaperCanvas.width,
+    y: (row+.5)/GRID_H*burnPaperCanvas.height
+  };
+}
+
+function spawnFlameAt(sx,sy,intensity){
+  if(flames.length>=FLAME_MAX) flames.splice(0,20);
+  var count=Math.floor(3+intensity*6);
+  for(var i=0;i<count;i++){
+    flames.push({
+      x:sx+rnd(-10,10), y:sy+rnd(-4,2), px:sx, py:sy,
+      vx:rnd(-1.2,1.2), vy:-(rnd(1.8,4.5)+intensity*rnd(1,3)),
+      life:1, decay:rnd(.012,.028),
+      size:rnd(6,16)+intensity*rnd(0,8),
+      flick:rnd(0,6.28), sway:rnd(.3,1.3), intensity:intensity
+    });
+  }
+}
+
+function spawnEmberAt(sx,sy){
+  if(embers.length>=EMBER_MAX) embers.splice(0,15);
+  embers.push({
+    x:sx+rnd(-8,8), y:sy, px:sx, py:sy,
+    vx:rnd(-2.6,2.6), vy:-(rnd(4.5,11)),
+    life:1, decay:rnd(.006,.018), size:rnd(.6,2.2),
+    flick:rnd(0,6.28), sway:rnd(.8,2.8)
+  });
+}
+
+function spawnSmokeAt(sx,sy,sizeScale){
+  if(smokes.length>=SMOKE_MAX) smokes.splice(0,8);
+  smokes.push({
+    x:sx+rnd(-14,14), y:sy, px:sx, py:sy,
+    vx:rnd(-.6,.6), vy:-(rnd(.7,1.6)),
+    life:1, decay:rnd(.003,.007), size:rnd(10,24)*(sizeScale||1),
+    flick:rnd(0,6.28), sway:rnd(.2,.8)
+  });
+}
+
+function spawnAshAt(sx,sy){
+  if(ashes.length>=ASH_MAX) return;
+  ashes.push({
+    x:sx, y:sy, px:sx, py:sy,
+    vx:rnd(-.3,.3), vy:rnd(-.2,.5),
+    life:1, decay:rnd(.0008,.003), size:rnd(1.5,5),
+    alpha:.7+Math.random()*.3
+  });
+}
+
+function updateParticles(dt){
+  var dtSec=Math.min(dt/1000,.05), mult=dtSec*60;
+
+  /* 火焰 */
+  for(var i=flames.length-1;i>=0;i--){
+    var f=flames[i];
+    f.flick+=.22*mult;
+    f.px=f.x; f.py=f.y;
+    f.x+=f.vx*mult+Math.sin(f.flick)*f.sway*mult;
+    f.y+=f.vy*mult;
+    f.vy-=.04*mult; f.life-=f.decay*mult; f.size+=.04*mult;
+    if(f.life<=0){ flames.splice(i,1); }
+  }
+
+  /* 余烬 */
+  for(var j=embers.length-1;j>=0;j--){
+    var e=embers[j];
+    e.flick+=.18*mult;
+    e.px=e.x; e.py=e.y;
+    e.x+=e.vx*mult+Math.sin(e.flick)*e.sway*mult;
+    e.y+=e.vy*mult;
+    e.vy-=.015*mult; e.life-=e.decay*mult;
+    if(e.life<=0){ embers.splice(j,1); }
+  }
+
+  /* 烟雾 */
+  for(var k=smokes.length-1;k>=0;k--){
+    var sm=smokes[k];
+    sm.flick+=.015*mult;
+    sm.px=sm.x; sm.py=sm.y;
+    sm.x+=sm.vx*mult+Math.sin(sm.flick)*sm.sway*mult;
+    sm.y+=sm.vy*mult;
+    sm.vy*=.994; sm.size+=.3*mult; sm.life-=sm.decay*mult;
+    if(sm.life<=0){ smokes.splice(k,1); }
+  }
+
+  /* 灰烬碎片 */
+  for(var a=ashes.length-1;a>=0;a--){
+    var ash=ashes[a];
+    ash.px=ash.x; ash.py=ash.y;
+    ash.x+=ash.vx*mult; ash.y+=ash.vy*mult;
+    ash.life-=ash.decay*mult;
+    if(ash.life<=0){ ashes.splice(a,1); }
+  }
+}
+
+/* ══════════════════════════════════════
+   渲染 — 燃烧遮罩（低分辨率→放大）
+   ══════════════════════════════════════ */
+/* 把燃烧网格生成一张低分辨率 RGBA 图层（fn(burn)→[r,g,b,a]），供平滑放大叠加 */
+function buildGridLayer(fn){
+  burnMaskCanvas.width=GRID_W; burnMaskCanvas.height=GRID_H;
+  var img=burnMaskCtx.createImageData(GRID_W,GRID_H);
+  var n=GRID_W*GRID_H;
+  for(var i=0;i<n;i++){
+    var burn=burnGrid?burnGrid[i]:0;
+    var c=fn(burn);
+    var pi=i*4;
+    img.data[pi]=c[0]; img.data[pi+1]=c[1]; img.data[pi+2]=c[2]; img.data[pi+3]=c[3];
+  }
+  burnMaskCtx.putImageData(img,0,0);
+}
+
+/* 离屏：CSS mask 图（白=保留封面, 黑/透明=挖空露出目录） */
+var maskUrlCanvas=document.createElement('canvas');
+var maskUrlCtx=maskUrlCanvas.getContext('2d');
+
+function renderBurnMask(){
+  var W=burnPaperCanvas.width, H=burnPaperCanvas.height;
+  if(W<10||H<10) return;
+  var ctx=burnPaperCtx;
+
+  /* ── A. 更新真封面 DOM 的 mask：烧尽处变透明 → 露出下层目录 ── */
+  /* mask 用 alpha：完好=不透明(保留)，烧尽=透明(挖空) */
+  buildGridLayer(function(burn){
+    if(burn<.74) return [255,255,255,255];          /* 保留封面 */
+    var t=Math.min(1,(burn-.74)/.24);
+    return [255,255,255, Math.round(255*(1-t))];    /* 渐挖空 */
+  });
+  /* 平滑放大到适配 DOM 比例的 mask 图 */
+  maskUrlCanvas.width=GRID_W; maskUrlCanvas.height=GRID_H;
+  maskUrlCtx.clearRect(0,0,GRID_W,GRID_H);
+  maskUrlCtx.drawImage(burnMaskCanvas,0,0);
+  var url='url('+maskUrlCanvas.toDataURL()+')';
+  coverLayer.css({'-webkit-mask-image':url,'mask-image':url});
+
+  /* ── B. 在焦痕画布上只画"焦褐/炭黑"边缘（叠在真封面之上）── */
+  ctx.globalCompositeOperation='source-over';
+  ctx.clearRect(0,0,W,H);
+  buildGridLayer(function(burn){
+    if(burn<.06) return [0,0,0,0];                  /* 完好：透明，露出真封面字 */
+    if(burn<.32){                                    /* 焦化：半透明褐 */
+      var t=(burn-.06)/.26;
+      return [130,75,22, Math.round(200*t)];
+    }
+    if(burn<.74){                                    /* 炭化：褐→黑 */
+      var t2=(burn-.32)/.42;
+      return [130*(1-t2)+18*t2, 75*(1-t2)+10*t2, 22*(1-t2)+6*t2, 235];
+    }
+    var t3=Math.min(1,(burn-.74)/.24);               /* 烧尽：炭黑渐隐(被挖空区) */
+    return [18,10,6, Math.round(235*(1-t3))];
+  });
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(burnMaskCanvas,0,0,GRID_W,GRID_H,0,0,W,H);
+}
+
+/* ── 燃烧边缘辉光叠加 ── */
+function renderBurnEdgeGlow(){
+  var W=burnPaperCanvas.width, H=burnPaperCanvas.height;
+  if(W<10||H<10) return;
+  burnPaperCtx.globalCompositeOperation='lighter';
+  for(var row=0;row<GRID_H;row+=2){
+    for(var col=0;col<GRID_W;col+=2){
+      var burn=burnGrid[row*GRID_W+col];
+      if(burn>.04&&burn<.24){
+        var sx=(col+.5)/GRID_W*W, sy=(row+.5)/GRID_H*H;
+        var glowAlpha=(.24-burn)/.2*.35;
+        var glow=burnPaperCtx.createRadialGradient(sx,sy,0,sx,sy,12);
+        glow.addColorStop(0,'rgba(255,160,30,'+glowAlpha+')');
+        glow.addColorStop(1,'transparent');
+        burnPaperCtx.fillStyle=glow;
+        burnPaperCtx.fillRect(sx-14,sy-14,28,28);
+      }
+    }
+  }
+  burnPaperCtx.globalCompositeOperation='source-over';
+}
+
+/* ══════════════════════════════════════
+   渲染 — 火焰粒子画布
+   ══════════════════════════════════════ */
+function renderFireParticles(){
+  fireCtx.globalCompositeOperation='source-over';
+  fireCtx.clearRect(0,0,fireCanvas.width,fireCanvas.height);
+
+  var W=fireCanvas.width, H=fireCanvas.height;
+
+  /* 烟雾（正常混合） */
+  for(var i=0;i<smokes.length;i++){
+    var sm=smokes[i];
+    var a=sm.life*.12;
+    if(a<=0) continue;
+    var g=fireCtx.createRadialGradient(sm.x,sm.y,0,sm.x,sm.y,sm.size);
+    var sh=Math.round(22+sm.life*16);
+    g.addColorStop(0,'rgba('+sh+','+(sh-4)+','+(sh+6)+','+a+')');
+    g.addColorStop(1,'rgba('+sh+','+(sh-4)+','+(sh+6)+',0)');
+    fireCtx.fillStyle=g; fireCtx.beginPath(); fireCtx.arc(sm.x,sm.y,sm.size,0,6.2832); fireCtx.fill();
+  }
+
+  /* 火焰+余烬（叠加发光） */
+  fireCtx.globalCompositeOperation='lighter';
+
+  /* 火焰粒子 */
+  for(var j=0;j<flames.length;j++){
+    var f=flames[j];
+    var L=f.life;
+    if(L<=.01) continue;
+    /* 温度→颜色：白热核心→橙中层→暗红尖端 */
+    var hue=10+L*42; var sat=95+(1-L)*5; var light=30+L*55;
+    var a=L*.58;
+    var g=fireCtx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.size);
+    g.addColorStop(0,'hsla('+hue+','+sat+'%,'+Math.min(98,light+12)+'%,'+a+')');
+    g.addColorStop(.35,'hsla('+hue+','+sat+'%,'+light+'%,'+(a*.7)+')');
+    g.addColorStop(1,'hsla('+(hue-8)+','+sat+'%,'+(light*.45)+'%,0)');
+    fireCtx.fillStyle=g; fireCtx.beginPath(); fireCtx.arc(f.x,f.y,f.size,0,6.2832); fireCtx.fill();
+  }
+
+  /* 余烬粒子 */
+  for(var k=0;k<embers.length;k++){
+    var e=embers[k];
+    var eL=e.life;
+    if(eL<=.01) continue;
+    /* 拖尾 */
+    var trailAlpha=eL*.45;
+    fireCtx.strokeStyle='hsla(30,90%,'+Math.round(50+eL*40)+'%,'+trailAlpha+')';
+    fireCtx.lineWidth=e.size*.7;
+    fireCtx.beginPath(); fireCtx.moveTo(e.px,e.py); fireCtx.lineTo(e.x,e.y); fireCtx.stroke();
+    /* 发光点 */
+    fireCtx.fillStyle='hsla(32,85%,'+Math.round(60+eL*32)+'%,'+eL*.75+')';
+    fireCtx.beginPath(); fireCtx.arc(e.x,e.y,e.size,0,6.2832); fireCtx.fill();
+  }
+
+  /* 底部热浪辉光 */
+  var now=performance.now();
+  var flicker=.85+.15*Math.sin(now*.012)*Math.sin(now*.019);
+  var glowGrad=fireCtx.createLinearGradient(0,H*.5,0,H);
+  glowGrad.addColorStop(0,'rgba(255,120,15,0)');
+  glowGrad.addColorStop(.5,'rgba(255,90,10,'+(.08*flicker)+')');
+  glowGrad.addColorStop(1,'rgba(255,50,5,'+(.18*flicker)+')');
+  fireCtx.fillStyle=glowGrad; fireCtx.fillRect(0,0,W,H);
+
+  fireCtx.globalCompositeOperation='source-over';
+}
+
+/* ══════════════════════════════════════
+   灰烬碎片渲染（纸张燃尽后残留）
+   ══════════════════════════════════════ */
+function renderAshes(ctx,W,H){
+  for(var i=0;i<ashes.length;i++){
+    var ash=ashes[i];
+    var a=ash.life*ash.alpha;
+    if(a<=.01) continue;
+    /* 不规则灰烬片 */
+    ctx.save(); ctx.translate(ash.x,ash.y); ctx.rotate(ash.life*2.5);
+    ctx.fillStyle='rgba(35,25,15,'+a+')';
+    ctx.beginPath();
+    var s=ash.size;
+    ctx.moveTo(-s,-s*.4); ctx.lineTo(s*.3,-s*.7); ctx.lineTo(s*.8,-s*.2);
+    ctx.lineTo(s*.6,s*.5); ctx.lineTo(-s*.2,s*.7); ctx.lineTo(-s*.7,s*.1);
+    ctx.closePath(); ctx.fill();
+    /* 微弱的余烬光 */
+    if(a>.3){
+      ctx.fillStyle='rgba(255,120,30,'+(a*.15)+')';
+      ctx.beginPath(); ctx.arc(0,0,s*.3,0,6.2832); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* ══════════════════════════════════════
+   主循环
+   ══════════════════════════════════════ */
+var burnLoopId=null;
+
+function burnLoop(timestamp){
+  if(burnDone){ burnLoopId=null; return; }
+  var dt=16; /* 近似 60fps */
+
+  if(burnActive){
+    updateBurnGrid(dt);
+    updateParticles(dt);
+
+    /* 沿燃烧边缘生成火焰粒子 */
+    var now=performance.now();
+    var elapsed=now-burnStartTime;
+    var partCount=0;
+    for(var row=0;row<GRID_H;row+=2){
+      for(var col=0;col<GRID_W;col+=2){
+        var burn=burnGrid[row*GRID_W+col];
+        if(burn>.03&&burn<.35){
+          var pos=gridToScreen(col,row);
+          var intensity=.15+(.35-burn)/.32*.85;
+          spawnFlameAt(pos.x,pos.y,intensity);
+          partCount++;
+          if(partCount>80) break;
+        }
+      }
+      if(partCount>80) break;
+    }
+
+    /* 燃烧边缘脱落余烬 */
+    for(var er=0;er<GRID_H;er+=3){
+      for(var ec=0;ec<GRID_W;ec+=3){
+        var eb=burnGrid[er*GRID_W+ec];
+        if(eb>.08&&eb<.4&&Math.random()<.25){
+          var epos=gridToScreen(ec,er);
+          spawnEmberAt(epos.x,epos.y);
+        }
+      }
+    }
+
+    /* 烟雾从燃烧区域升起 */
+    if(Math.random()<.5){
+      for(var sr=0;sr<GRID_H;sr+=4){
+        for(var sc=0;sc<GRID_W;sc+=4){
+          var sb=burnGrid[sr*GRID_W+sc];
+          if(sb>.15&&sb<.7&&Math.random()<.3){
+            var spos=gridToScreen(sc,sr);
+            spawnSmokeAt(spos.x,spos.y,1+sb*.5);
+          }
+        }
+      }
+    }
+
+    /* 燃尽单元格 → 生成灰烬碎片 */
+    for(var ar=0;ar<GRID_H;ar+=4){
+      for(var ac=0;ac<GRID_W;ac+=4){
+        var ab=burnGrid[ar*GRID_W+ac];
+        if(ab>.75&&ab<.85&&Math.random()<.08){
+          var apos=gridToScreen(ac,ar);
+          spawnAshAt(apos.x,apos.y);
+        }
+      }
+    }
+
+    /* 渲染燃烧遮罩 */
+    renderBurnMask();
+    renderBurnEdgeGlow();
+
+    /* 渲染火焰粒子 */
+    renderFireParticles();
+
+    /* 灰烬碎片渲染到纸张画布 */
+    renderAshes(burnPaperCtx,burnPaperCanvas.width,burnPaperCanvas.height);
+
+    /* 检查是否全部烧尽 → 进入冷却阶段（不强停、不抹封面） */
+    var allBurned=true;
+    for(var ci=0;ci<burnGrid.length;ci++){
+      if(burnGrid[ci]<.99){ allBurned=false; break; }
+    }
+    if(allBurned){ enterCooling(); }
+  }
+  else if(burnCooling){
+    /* 冷却：停止蔓延与生成新火焰，让残余火焰/余烬/灰烬自然飘散消失 */
+    updateParticles(dt);
+    /* 网格已全烧尽 → renderBurnMask 会把封面整张挖空，目录完整露出 */
+    renderBurnMask();
+    renderFireParticles();
+    renderAshes(burnPaperCtx,burnPaperCanvas.width,burnPaperCanvas.height);
+    /* 灰烬缓慢变暗 */
+    for(var ai=0;ai<ashes.length;ai++) ashes[ai].alpha-=.0012;
+    /* 火焰、余烬、烟雾都散尽 → 收场 */
+    if(flames.length===0&&embers.length===0&&smokes.length===0){
+      endBurn();
+      return;
+    }
+  }
+
+  burnLoopId=requestAnimationFrame(burnLoop);
+}
+
+/* 蔓延 → 冷却 的唯一入口：停止蔓延，但保留已烧尽的网格（封面已被挖空） */
+function enterCooling(){
+  if(burnCooling) return;
+  burnActive=false; burnCooling=true;
+}
+
+/* ══════════════════════════════════════
+   启动 / 停止
+   ══════════════════════════════════════ */
+function startBurn(){
+  if(burnActive||burnStarted) return;   /* 已在燃烧流程中（含点火前等待）→ 不重入 */
+
+  /* 开启新一轮运行：作废所有旧时间线 */
+  burnRun++;
+  var myRun=burnRun;
+  clearBurnTimers();
+
+  initBurnGrid();
+  resizeBurnPaper();
+
+  /* 显示焦痕画布；真封面 DOM 保留原位，用 mask 逐步挖空；目录在下层 */
+  burnPaperCanvas.style.display='block';
+  coverLayer.css({
+    '-webkit-mask-size':'100% 100%','mask-size':'100% 100%',
+    '-webkit-mask-repeat':'no-repeat','mask-repeat':'no-repeat',
+    '-webkit-mask-image':'none','mask-image':'none'
+  });
+  coverLayer.addClass('burning');
+  tocLayer.addClass('shown');
+
+  /* 2秒后开始燃烧：火线从右下角匀速扫过，确定性地在 BURN_DURATION 内烧尽 */
+  burnStarted=true;
+  scheduleBurn(function(){
+    burnActive=true; burnStartTime=performance.now();
+    fireCanvas.style.display='block'; fireCanvas.style.opacity='1';
+    /* 不再需要催熟/强停：updateBurnGrid 按时间进度保证 5s 内全部烧尽，
+       烧尽后 burnLoop 自动进入冷却→收场（见 enterCooling/endBurn） */
+  },BURN_DELAY,myRun);
+
+
+  if(!burnLoopId) burnLoopId=requestAnimationFrame(burnLoop);
+}
+
+function endBurn(){
+  if(burnDone) return;
+  burnDone=true; burnActive=false; burnStarted=false; burnCooling=false;
+  if(burnLoopId){ cancelAnimationFrame(burnLoopId); burnLoopId=null; }
+
+  var myRun=burnRun;
+
+  /* 火焰画布渐隐 */
+  fireCanvas.style.opacity='0';
+  scheduleBurn(function(){
+    fireCanvas.style.display='none';
+    try{fireCtx.clearRect(0,0,fireCanvas.width,fireCanvas.height);}catch(e){}
+    fireCanvas.style.opacity='1';
+  },600,myRun);
+
+  /* 封面已整张烧尽（画布全透明，目录完整露出）→ 隐藏燃烧画布交还给 DOM 目录层 */
+  scheduleBurn(function(){
+    burnPaperCanvas.style.display='none';
+    try{burnPaperCtx.clearRect(0,0,burnPaperCanvas.width,burnPaperCanvas.height);}catch(e){}
+  },800,myRun);
+}
+
+/* ── 重置（返回封面）── */
+function resetBurn(){
+  /* 作废所有挂起时间线：代号自增 + 清 timer，旧 setTimeout 即使漏网也不执行 */
+  burnRun++;
+  clearBurnTimers();
+  burnDone=true; burnActive=false; burnStarted=false; burnCooling=false;
+  if(burnLoopId){ cancelAnimationFrame(burnLoopId); burnLoopId=null; }
+  burnGrid=null; flames=[]; embers=[]; smokes=[]; ashes=[];
+  fireCanvas.style.display='none';
+  burnPaperCanvas.style.display='none';
+  try{fireCtx.clearRect(0,0,fireCanvas.width,fireCanvas.height);}catch(e){}
+  try{burnPaperCtx.clearRect(0,0,burnPaperCanvas.width,burnPaperCanvas.height);}catch(e){}
+  coverLayer.removeClass('burning');
+  coverLayer.css({'-webkit-mask-image':'none','mask-image':'none'});  /* 恢复完整封面 */
+  tocLayer.removeClass('shown');
+  burnDone=false;
+}
+
+coverBtn.on('click',function(e){ e.stopPropagation(); startBurn(); });
+
+/* ── 切换开场白（await + 强制刷新）── */
+var switching=false;
+function gotoSwipe(swipe){
+  if(switching)return; switching=true;
+  function done(){switching=false;}
+  try{
+    if(typeof setChatMessages==='function'){
+      Promise.resolve(setChatMessages([{message_id:0,swipe_id:swipe}],{refresh:'all'}))
+        .then(done,done);
+    }else if(typeof SillyTavern!=='undefined'&&SillyTavern.getContext){
+      var c=SillyTavern.getContext();
+      if(c&&c.setSwipe){c.setSwipe(swipe);setTimeout(done,800);}else done();
+    }else if(window.TavernHelper&&window.TavernHelper.switchMessage){
+      window.TavernHelper.switchMessage(swipe);done();
+    }else done();
+  }catch(err){done();}
+}
+$(document).on('click','.toc-item',function(){
+  gotoSwipe(parseInt($(this).data('swipe'),10));
+});
+$('#toc-back').on('click',function(e){e.stopPropagation();resetBurn();});
+
+
+/* ═══════════════════════════════════════════
+   光标拖尾粒子 + 环境飘落粒子（排斥避让）
+   ═══════════════════════════════════════════ */
+(function(){
+  var container = document.querySelector(".kcb-wrap");
+  var canvas = document.getElementById("kcb-particles-canvas");
+  if(!container||!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var w, h, animId;
+  var cursorParts = [];
+  var ambientParts = [];
+  var trail = [];
+  var MAX_TRAIL = 36;
+  var AMBIENT_MAX = 55;
+  var CURSOR_MAX = 80;
+  var REPEL_R = 68;
+  var REPEL_FORCE = 0.6;
+  var mouseX = -200, mouseY = -200;
+  var mouseOn = false;
+  var mouseSpeed = 0;
+  var lastMX = -200, lastMY = -200;
+
+  function resize(){
+    var r = container.getBoundingClientRect();
+    w = canvas.width = r.width;
+    h = canvas.height = r.height;
+  }
+
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+
+  function initAmbient(){
+    ambientParts = [];
+    for(var i=0; i<AMBIENT_MAX; i++){
+      ambientParts.push({
+        x: Math.random()*w,
+        y: Math.random()*h,
+        vx: (Math.random()-.5)*.25,
+        vy: .15 + Math.random()*.5,
+        _baseVy: .15 + Math.random()*.5,
+        size: .5 + Math.random()*1.3,
+        gold: Math.random() < .65,
+        phase: Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function spawnCursor(x, y, speed){
+    var count = speed > 2 ? 3 : (speed > .5 ? 2 : 1);
+    for(var i=0; i<count; i++){
+      if(cursorParts.length >= CURSOR_MAX) cursorParts.shift();
+      var gold = Math.random() < .55;
+      cursorParts.push({
+        x: x + rnd(-5,5),
+        y: y + rnd(-5,5),
+        vx: rnd(-.6,.6),
+        vy: rnd(-.6,.6),
+        size: .7 + Math.random()*2.4,
+        life: 1,
+        decay: .012 + Math.random()*.032,
+        gold: gold
+      });
+    }
+  }
+
+  function update(){
+    if(mouseOn){
+      trail.push({x: mouseX, y: mouseY});
+      if(trail.length > MAX_TRAIL) trail.shift();
+      var spd = mouseSpeed;
+      var count = spd > 3 ? 4 : (spd > 1 ? 3 : 2);
+      for(var i=0; i<count; i++) spawnCursor(mouseX, mouseY, spd);
+      if(trail.length > 2){
+        var step = Math.max(2, Math.floor(trail.length/6));
+        for(var k=0; k<trail.length-step; k+=step){
+          var tp = trail[k];
+          if(Math.random() < .35) spawnCursor(tp.x, tp.y, 1);
+        }
+      }
+    } else {
+      if(trail.length > 0) trail.shift();
+    }
+
+    for(var j=cursorParts.length-1; j>=0; j--){
+      var cp = cursorParts[j];
+      cp.x += cp.vx;
+      cp.y += cp.vy;
+      cp.vx *= .965;
+      cp.vy *= .965;
+      cp.life -= cp.decay;
+      if(cp.life <= 0) cursorParts.splice(j,1);
+    }
+
+    var samples = [];
+    if(mouseOn) samples.push({x: mouseX, y: mouseY});
+    for(var s=0; s<trail.length; s+=4) samples.push(trail[s]);
+
+    for(var m=0; m<ambientParts.length; m++){
+      var ap = ambientParts[m];
+      if(samples.length > 0 && mouseOn){
+        var totalFx = 0, totalFy = 0;
+        for(var n=0; n<samples.length; n++){
+          var dx = ap.x - samples[n].x;
+          var dy = ap.y - samples[n].y;
+          var dist = Math.sqrt(dx*dx + dy*dy);
+          if(dist < REPEL_R && dist > .5){
+            var f = REPEL_FORCE * Math.pow(1 - dist/REPEL_R, 1.5);
+            totalFx += (dx/dist) * f;
+            totalFy += (dy/dist) * f;
+          }
+        }
+        ap.vx += totalFx;
+        ap.vy += totalFy;
+      }
+      ap.x += ap.vx + Math.sin(ap.phase + performance.now()*.0008) * .12;
+      ap.y += ap.vy;
+      ap.phase += .008;
+      ap.vx *= .985;
+      ap.vy *= .985;
+      ap.vy += (ap._baseVy - ap.vy) * .003;
+      if(ap.y > h + 15){ ap.y = -15; ap.x = Math.random()*w; ap.vx = 0; ap.vy = ap._baseVy; }
+      if(ap.x < -15) ap.x = w + 15;
+      if(ap.x > w + 15) ap.x = -15;
+    }
+
+    if(mouseOn){
+      mouseSpeed = Math.sqrt((mouseX-lastMX)*(mouseX-lastMX) + (mouseY-lastMY)*(mouseY-lastMY));
+      lastMX = mouseX;
+      lastMY = mouseY;
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, w, h);
+    for(var i=0; i<ambientParts.length; i++){
+      var ap = ambientParts[i];
+      var a = .25 + Math.sin(ap.phase)*.12;
+      var col = ap.gold ? "200,164,92" : "154,126,200";
+      ctx.fillStyle = "rgba("+col+","+a+")";
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, ap.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "lighter";
+    for(var j=0; j<cursorParts.length; j++){
+      var cp = cursorParts[j];
+      var a2 = cp.life * .6;
+      var col2 = cp.gold ? "200,164,92" : "154,126,200";
+      var sz = cp.size * (1 + cp.life*.5);
+      var g = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, sz*2.5);
+      g.addColorStop(0, "rgba("+col2+","+a2+")");
+      g.addColorStop(.35, "rgba("+col2+","+(a2*.45)+")");
+      g.addColorStop(1, "rgba("+col2+",0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, sz*2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  function loop(){
+    update();
+    draw();
+    animId = requestAnimationFrame(loop);
+  }
+
+  container.addEventListener("mousemove", function(e){
+    var r = canvas.getBoundingClientRect();
+    mouseX = e.clientX - r.left;
+    mouseY = e.clientY - r.top;
+    mouseOn = true;
+  });
+  container.addEventListener("mouseenter", function(e){
+    mouseOn = true;
+    var r = canvas.getBoundingClientRect();
+    mouseX = e.clientX - r.left;
+    mouseY = e.clientY - r.top;
+  });
+  container.addEventListener("mouseleave", function(){ mouseOn = false; });
+  window.addEventListener("resize", function(){ resize(); initAmbient(); });
+
+  resize();
+  initAmbient();
+  loop();
+})();
+
+});
+</script>
+</body></html>
+```

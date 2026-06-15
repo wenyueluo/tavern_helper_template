@@ -1,0 +1,9 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var jy = getvar('stat_data.炮友数据.姜野.好感度', { defaults: 76 });
+_%>
+<%_ if (jy >= 91) { _%>
+<%- await getwi(null, '姜野_阶段04_彻底臣服') %>
+<%_ } else { _%>
+<%- await getwi(null, '姜野_阶段03_认输不认账') %>
+<%_ } _%>

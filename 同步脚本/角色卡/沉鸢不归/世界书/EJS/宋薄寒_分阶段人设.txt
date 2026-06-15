@@ -1,0 +1,9 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var sbc = getvar('stat_data.炮友数据.宋薄寒.好感度', { defaults: 80 });
+_%>
+<%_ if (sbc >= 91) { _%>
+<%- await getwi(null, '宋薄寒_阶段04_炽热独钟') %>
+<%_ } else { _%>
+<%- await getwi(null, '宋薄寒_阶段03_冰冷消融') %>
+<%_ } _%>

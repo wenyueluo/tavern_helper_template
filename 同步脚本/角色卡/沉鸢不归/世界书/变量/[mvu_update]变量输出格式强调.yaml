@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=../../schema.json
+---
+**重要提醒**
+每次回复末尾**必须**包含 <UpdateVariable> 块以更新变量状态。
+即使本节没有任何变量变化，也必须输出空的 <JSONPatch>[]</JSONPatch>。
+变量更新块必须放在回复的最末尾，在所有叙事内容之后。

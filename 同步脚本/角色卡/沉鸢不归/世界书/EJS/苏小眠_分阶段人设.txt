@@ -1,0 +1,11 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var s = getvar('stat_data.炮友数据.苏小眠.好感度', { defaults: 58 });
+_%>
+<%_ if (s >= 91) { _%>
+<%- await getwi(null, '苏小眠_阶段04_偷偷独占') %>
+<%_ } else if (s >= 71) { _%>
+<%- await getwi(null, '苏小眠_阶段03_暗中炽热') %>
+<%_ } else { _%>
+<%- await getwi(null, '苏小眠_阶段02_胆怯深爱') %>
+<%_ } _%>

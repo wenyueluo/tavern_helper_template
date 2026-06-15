@@ -1,0 +1,29 @@
+每次回复末尾**必须**包含以下格式的变量更新块：
+
+<UpdateVariable>
+<Analysis>$(IN ENGLISH, no more than 80 words)
+- ${analyze every variable that changed or should change in this turn}
+- ${explain why each change is needed based on the narrative}
+- ${list the new values and operations}
+</Analysis>
+<JSONPatch>
+[
+  { "op": "replace", "path": "/世界/当前日期", "value": "6月13日·周五" },
+  { "op": "replace", "path": "/世界/当前时间", "value": "下午" },
+  { "op": "replace", "path": "/炮友数据/闻浅/好感度", "value": "87" },
+  { "op": "replace", "path": "/炮友数据/闻浅/当前状态", "value": "满足" },
+  { "op": "replace", "path": "/炮友数据/闻浅/最后见面", "value": "今天" }
+]
+</JSONPatch>
+</UpdateVariable>
+
+格式说明：
+- <Analysis> 内容用英文写，不超过80词，简要分析本轮哪些变量发生了变化及原因
+- <JSONPatch> 使用 JSON Patch 格式（RFC 6902）
+- 支持的操作：
+  - { "op": "replace", "path": "/path", "value": "..." }  替换/更新值
+  - { "op": "add", "path": "/path/new_key", "value": "..." }  新增键
+  - { "op": "remove", "path": "/path/key" }  删除键
+- path 路径格式：/顶层字段/子字段/...
+- 数字类型的 value 用数字格式不用引号，如 "value": 87
+- 只列出本轮实际变化的变量，不要列出未变化的变量

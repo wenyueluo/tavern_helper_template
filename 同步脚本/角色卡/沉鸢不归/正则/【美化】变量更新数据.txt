@@ -1,0 +1,81 @@
+
+<div style="width: 88%; margin: 24px auto; font-family: 'Segoe UI','Microsoft YaHei','PingFang SC',sans-serif;">
+  <details class="var-patch-panel" style="
+    background: linear-gradient(145deg, #0e0a13 0%, #110f0d 50%, #0c0a0f 100%);
+    border: 1px solid rgba(200,164,92,.42);
+    border-radius: 14px;
+    box-shadow:
+      0 0 20px rgba(154,126,200,.07),
+      0 4px 24px rgba(0,0,0,.45),
+      inset 0 1px 0 rgba(200,164,92,.05);
+    overflow: hidden;
+    transition: all .4s cubic-bezier(0.4,0,0.2,1);
+  ">
+    <summary style="
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: .5px;
+      background: linear-gradient(135deg, rgba(200,164,92,.10) 0%, rgba(154,126,200,.04) 55%, rgba(200,164,92,.08) 100%);
+      border-bottom: 1px solid rgba(200,164,92,.10);
+      transition: all .3s ease;
+      position: relative;
+    ">
+      <span style="
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #c8a45c 0%, #e0c080 38%, #f0d8b0 56%, #b89bd0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        filter: drop-shadow(0 0 6px rgba(154,126,200,.28));
+      ">沉鸢不归 · 变量更新</span>
+      <span style="
+        margin-left: auto;
+        font-size: 11px;
+        color: #6b6068;
+        letter-spacing: .3px;
+        transition: all .3s ease;
+      " class="patch-tog" data-open="▲ 收起" data-close="▼ 展开"></span>
+    </summary>
+    <div style="
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 18px 20px;
+      color: #c8c0b8;
+      font-size: 13px;
+      line-height: 1.7;
+      font-family: 'Cascadia Code','Fira Code','JetBrains Mono','Consolas','Microsoft YaHei',monospace;
+      background: rgba(0,0,0,.25);
+      white-space: pre-wrap;
+      word-break: break-word;
+      transition: all .35s cubic-bezier(0.4,0,0.2,1);
+      transform: translateY(-12px);
+      opacity: 0;
+    ">$2</div>
+  </details>
+</div>
+
+<style>
+  .var-patch-panel::-webkit-scrollbar{width:5px}
+  .var-patch-panel::-webkit-scrollbar-track{background:rgba(0,0,0,.15);border-radius:0 0 10px 0}
+  .var-patch-panel::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#c8a45c 0%,#9a7ec8 100%);border-radius:3px}
+  .var-patch-panel::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#e0c080 0%,#b89bd0 100%)}
+  .var-patch-panel[open]{box-shadow:0 0 32px rgba(154,126,200,.14),0 6px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(200,164,92,.07)!important;border-color:rgba(154,126,200,.6)!important}
+  .var-patch-panel[open] > div{transform:translateY(0)!important;opacity:1!important}
+  .var-patch-panel summary::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#9a7ec8,#c86878,transparent)}
+  .var-patch-panel summary:hover{background:linear-gradient(135deg,rgba(200,164,92,.14) 0%,rgba(154,126,200,.06) 55%,rgba(200,164,92,.13) 100%)!important}
+  .var-patch-panel[open] summary{border-radius:14px 14px 0 0!important;border-bottom-color:rgba(200,164,92,.22)!important}
+  .var-patch-panel summary::marker{display:none}
+  .var-patch-panel[open] summary .patch-tog::after{content:attr(data-open)}
+  .var-patch-panel:not([open]) summary .patch-tog::after{content:attr(data-close)}
+</style>

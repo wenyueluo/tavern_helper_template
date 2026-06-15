@@ -1,0 +1,11 @@
+<%_
+if (typeof stat_data === 'undefined') var stat_data = {};
+var l = getvar('stat_data.炮友数据.凌千夏.好感度', { defaults: 55 });
+_%>
+<%_ if (l >= 91) { _%>
+<%- await getwi(null, '凌千夏_阶段04_疯狂占有') %>
+<%_ } else if (l >= 71) { _%>
+<%- await getwi(null, '凌千夏_阶段03_卸甲归心') %>
+<%_ } else { _%>
+<%- await getwi(null, '凌千夏_阶段02_傲娇深陷') %>
+<%_ } _%>
