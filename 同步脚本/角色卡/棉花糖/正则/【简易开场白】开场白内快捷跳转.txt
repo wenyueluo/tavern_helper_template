@@ -1,0 +1,512 @@
+```html
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>棉花糖·简易跳转</title>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent}
+:root{
+  --pink:#f0a8c8;--pink-lt:#fcd8e8;--pink-dim:#d87898;
+  --blue:#a0c0f0;--blue-lt:#d0e0f8;--blue-dk:#7098c8;
+  --text:#e8d8e8;--text-dim:#9888a0;
+}
+
+/* ═══════════ 外层容器 ═══════════ */
+.jk-wrap{
+  display:flex;align-items:flex-end;flex-wrap:wrap;gap:6px;
+  padding:12px 16px 22px;position:relative;overflow:visible;
+  border:1px solid rgba(240,168,200,.28);border-radius:16px;
+  font-family:"Noto Serif SC","Microsoft YaHei",serif;
+  background:
+    radial-gradient(ellipse 50% 140% at 0% 50%,rgba(240,168,200,.10),transparent 55%),
+    radial-gradient(ellipse 45% 120% at 100% 40%,rgba(160,192,240,.08),transparent 50%),
+    linear-gradient(155deg,#1a1028,#1c142c);
+  box-shadow:0 4px 24px rgba(0,0,0,.45),inset 0 0 40px rgba(200,150,180,.04);
+  backdrop-filter:blur(8px);
+  clip-path:inset(0 round 16px); /* 替代 overflow:hidden，圆角裁切 */
+}
+
+/* 左侧装饰线 */
+.jk-wrap::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px;
+  background:linear-gradient(180deg,var(--pink),var(--blue-lt),transparent);
+  box-shadow:0 0 12px rgba(240,168,200,.40);
+  animation:candyPulse 4.5s ease-in-out infinite;z-index:1;
+}
+@keyframes candyPulse{
+  0%,100%{box-shadow:0 0 12px rgba(240,168,200,.40)}
+  50%{box-shadow:0 0 20px rgba(240,168,200,.58),0 0 6px rgba(160,192,240,.30)}
+}
+
+/* ═══════════ Canvas 粒子层 ═══════════ */
+.jk-canvas{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:16px}
+
+/* ═══════════ 棉花糖云团徽记 ═══════════ */
+.jk-sigil{width:20px;height:20px;flex-shrink:0;margin-left:1px;margin-bottom:3px;position:relative;z-index:1;
+  filter:drop-shadow(0 0 6px rgba(240,168,200,.45));
+  animation:cloudBob 5s ease-in-out infinite}
+@keyframes cloudBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.jk-sigil .cc1{fill:url(#ccGrad1);opacity:.75}
+.jk-sigil .cc2{fill:url(#ccGrad2);opacity:.55}
+.jk-sigil .cc3{fill:url(#ccGrad3);opacity:.65}
+.jk-sigil .spark{fill:#fff;opacity:.8;animation:sparkTwinkle 3s ease-in-out infinite}
+.jk-sigil .spark:nth-child(4){animation-delay:.7s}
+.jk-sigil .spark:nth-child(5){animation-delay:1.4s}
+@keyframes sparkTwinkle{0%,100%{opacity:.3}50%{opacity:.9}}
+
+/* ═══════════ 标题 ═══════════ */
+.jk-title{
+  position:relative;z-index:1;margin-bottom:3px;
+  font-size:12px;font-weight:600;letter-spacing:2px;margin-right:2px;
+  background:linear-gradient(135deg,#fcd0e0 0%,var(--pink) 35%,var(--blue-lt) 70%,#f0c0d8 100%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:titleSh 8s ease-in-out infinite;
+}
+@keyframes titleSh{
+  0%,100%{background-position:0% 0}
+  50%{background-position:100% 0}
+}
+
+/* ═══════════ 分隔线 ═══════════ */
+.jk-div{width:1px;align-self:stretch;margin:2px 4px;position:relative;z-index:1;
+  background:linear-gradient(180deg,transparent,rgba(240,168,200,.25),rgba(160,192,240,.18),transparent)}
+
+/* ═══════════ 返回按钮 ═══════════ */
+.jk-back{
+  display:inline-flex;align-items:center;gap:5px;position:relative;z-index:1;margin-bottom:3px;
+  padding:6px 14px;font-size:11px;letter-spacing:2px;
+  font-family:inherit;color:rgba(240,168,200,.82);cursor:pointer;
+  border:1px solid rgba(240,168,200,.30);border-radius:18px;
+  background:rgba(240,168,200,.06);overflow:hidden;
+  transition:all .35s cubic-bezier(.4,0,.2,1);
+}
+.jk-back span{position:relative;z-index:1}
+.jk-back::before{content:"";position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(160,192,240,.16) 50%,transparent 70%);
+  transform:translateX(-130%);transition:transform .55s ease}
+.jk-back:hover{color:#fce8f0;border-color:rgba(160,192,240,.55);
+  background:rgba(160,192,240,.10);box-shadow:0 0 18px rgba(160,192,240,.14)}
+.jk-back:hover::before{transform:translateX(130%)}
+.jk-back:active{transform:scale(.95)}
+
+/* ══════════════════════════════════════════
+   棉花糖 puff 按钮 — 不同口味的棉花糖本体
+   ══════════════════════════════════════════ */
+.jk-num{
+  position:relative;width:34px;height:34px;flex-shrink:0;z-index:1;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50%;cursor:pointer;
+  font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:14px;font-weight:600;
+  color:rgba(255,255,255,.82);
+  border:none;
+  /* 棉花糖蓬松感：多层光晕模拟糖丝纤维 */
+  background:radial-gradient(ellipse 42% 38% at 42% 38%,var(--cc-lt) 0%,var(--cc-md) 55%,var(--cc-dk) 100%);
+  box-shadow:
+    0 0 6px var(--cc-gl),
+    0 0 14px var(--cc-gl2),
+    2px 0 5px var(--cc-lt),
+    -2px 0 5px var(--cc-lt),
+    0 -2px 6px var(--cc-lt),
+    0 2px 2px rgba(0,0,0,.2);
+  transition:all .35s cubic-bezier(.34,1.2,.5,1);
+  text-shadow:0 1px 2px rgba(0,0,0,.3);
+}
+
+/* 蓬松光晕叠加层 */
+.jk-num::before{
+  content:"";position:absolute;inset:-3px;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle at 50% 50%,var(--cc-gl) 0%,transparent 70%);
+  opacity:.35;transition:opacity .35s,inset .35s;
+}
+
+/* 纸棒（默认隐藏） */
+.jk-num::after{
+  content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  width:3px;height:0;border-radius:0 0 2px 2px;
+  background:linear-gradient(180deg,#dcc8a0,#c8a878 60%,#b89868);
+  transition:height .35s cubic-bezier(.34,1.2,.5,1);
+}
+
+/* hover — 悬浮膨大 */
+.jk-num:hover{
+  transform:translateY(-4px) scale(1.08);
+  box-shadow:
+    0 0 10px var(--cc-gl),
+    0 0 22px var(--cc-gl2),
+    3px 0 7px var(--cc-lt),
+    -3px 0 7px var(--cc-lt),
+    0 -3px 10px var(--cc-lt),
+    0 4px 8px rgba(0,0,0,.25);
+}
+.jk-num:hover::before{inset:-5px;opacity:.5}
+.jk-num:active{transform:translateY(-1px) scale(.95)}
+
+/* 当前选中 — 举起露出纸棒 + 粉焰 */
+.jk-num.active{
+  transform:translateY(-8px) scale(1.12);
+  color:#fff;
+  box-shadow:
+    0 0 14px var(--cc-gl),
+    0 0 30px var(--cc-gl2),
+    4px 0 10px var(--cc-lt),
+    -4px 0 10px var(--cc-lt),
+    0 -4px 12px var(--cc-lt),
+    0 6px 14px rgba(0,0,0,.25);
+  animation:puffGlow 2.5s ease-in-out infinite;
+  z-index:5;
+}
+.jk-num.active::before{inset:-6px;opacity:.6}
+.jk-num.active::after{height:16px}
+
+@keyframes puffGlow{
+  0%,100%{box-shadow:0 0 14px var(--cc-gl),0 0 30px var(--cc-gl2),4px 0 10px var(--cc-lt),-4px 0 10px var(--cc-lt),0 -4px 12px var(--cc-lt),0 6px 14px rgba(0,0,0,.25)}
+  50%{box-shadow:0 0 22px var(--cc-gl),0 0 42px var(--cc-gl2),6px 0 14px var(--cc-lt),-6px 0 14px var(--cc-lt),0 -6px 18px var(--cc-lt),0 6px 16px rgba(0,0,0,.22)}
+}
+
+/* ═══════════ tooltip ═══════════ */
+.jk-num .tip{
+  position:absolute;bottom:calc(100% + 30px);left:50%;transform:translateX(-50%) translateY(4px);
+  white-space:nowrap;padding:6px 12px;font-size:11px;letter-spacing:.5px;
+  font-family:"Noto Serif SC",serif;font-style:normal;
+  color:var(--text);background:linear-gradient(160deg,#1e1430,#181020);
+  border:1px solid rgba(240,168,200,.30);border-radius:10px;
+  box-shadow:0 4px 18px rgba(0,0,0,.55);
+  opacity:0;pointer-events:none;transition:all .25s ease;z-index:20;
+}
+.jk-num .tip b{color:var(--pink-lt);font-weight:600;margin-right:5px}
+.jk-num .tip i{color:var(--blue-lt);font-style:normal;font-size:10px}
+.jk-num .tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:rgba(240,168,200,.30)}
+.jk-num:hover .tip{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ═══════════ 手机适配 ═══════════ */
+@media(max-width:480px){
+  .jk-wrap{padding:10px 12px 18px;gap:4px}
+  .jk-num{width:30px;height:30px;font-size:12px}
+  .jk-num.active{transform:translateY(-6px) scale(1.08)}
+  .jk-num.active::after{height:12px}
+  .jk-num .tip{bottom:calc(100% + 24px)}
+  .jk-title{font-size:11px;letter-spacing:1px}
+  .jk-back{padding:5px 10px;font-size:10px}
+}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+<defs>
+  <linearGradient id="jkg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fcd0e0"/><stop offset=".45" stop-color="#f0a8c8"/><stop offset=".75" stop-color="#d0e0f8"/><stop offset="1" stop-color="#a0c0f0"/>
+  </linearGradient>
+  <radialGradient id="ccGrad1" cx="40%" cy="40%"><stop offset="0" stop-color="#fcd8e8"/><stop offset="100%" stop-color="#f0a0c0"/></radialGradient>
+  <radialGradient id="ccGrad2" cx="60%" cy="35%"><stop offset="0" stop-color="#f0c0d8"/><stop offset="100%" stop-color="#e898b8"/></radialGradient>
+  <radialGradient id="ccGrad3" cx="45%" cy="50%"><stop offset="0" stop-color="#fce0f0"/><stop offset="100%" stop-color="#f0a8c8"/></radialGradient>
+</defs></svg>
+
+<div class="jk-wrap" id="jk-wrap">
+  <canvas class="jk-canvas" id="jk-canvas"></canvas>
+
+  <!-- 棉花糖云团徽记 -->
+  <svg class="jk-sigil" viewBox="0 0 24 24">
+    <circle class="cc1" cx="10" cy="12" r="6"/>
+    <circle class="cc2" cx="15" cy="10" r="5.5"/>
+    <circle class="cc3" cx="12" cy="14" r="5"/>
+    <circle class="cc2" cx="8" cy="10" r="4.2"/>
+    <circle class="cc1" cx="14" cy="13" r="4"/>
+    <circle class="spark" cx="18" cy="6" r=".8"/>
+    <circle class="spark" cx="6" cy="6" r=".6"/>
+    <circle class="spark" cx="16" cy="4" r=".5"/>
+  </svg>
+  <span class="jk-title">棉花糖</span>
+  <button class="jk-back" id="jk-back" title="返回目录"><span>&larr; 返回</span></button>
+  <span class="jk-div"></span>
+</div>
+
+<script>
+$(function(){
+
+/* ═══════════ 章节数据 ═══════════ */
+var openers=[
+  {n:1,name:'重逢',sub:'飞扑与泪水'},
+  {n:2,name:'报复·雨访',sub:'妈妈的第一道裂缝'},
+  {n:3,name:'暴露·墙角',sub:'不该听到的声音'},
+  {n:4,name:'暴露·走廊',sub:'棒棒糖与悄悄话'},
+  {n:5,name:'报复·女友',sub:'奶茶与公寓的午后'},
+  {n:6,name:'对峙',sub:'酒店的耳光与眼泪'},
+  {n:7,name:'和解',sub:'午后的餐桌'},
+  {n:8,name:'公寓夜晚',sub:'许念棠的公寓'},
+  {n:9,name:'苏家周末',sub:'客厅里的日常'},
+  {n:10,name:'排骨汤',sub:'周六的下午'},
+  {n:11,name:'傍晚的茶',sub:'十二月'}
+];
+
+/* 五种棉花糖口味调色盘 */
+var ccPalette=[
+  {lt:'#fcd8e8',md:'#f0a8c8',dk:'#d87898',gl:'rgba(240,168,200,.45)',gl2:'rgba(240,168,200,.25)'},  /* 草莓粉 */
+  {lt:'#d8e8fc',md:'#a0c8f0',dk:'#6a90c8',gl:'rgba(160,200,240,.45)',gl2:'rgba(160,200,240,.25)'},  /* 蓝莓蓝 */
+  {lt:'#f0d8f8',md:'#d0a8e8',dk:'#a878c0',gl:'rgba(208,168,232,.45)',gl2:'rgba(208,168,232,.25)'},  /* 香芋紫 */
+  {lt:'#fce0d8',md:'#f8b8a0',dk:'#d08870',gl:'rgba(248,184,160,.45)',gl2:'rgba(248,184,160,.25)'},  /* 蜜桃橙 */
+  {lt:'#d8f4ec',md:'#a8dcd0',dk:'#78b0a0',gl:'rgba(168,220,208,.45)',gl2:'rgba(168,220,208,.25)'},  /* 薄荷绿 */
+  {lt:'#d8d8fc',md:'#a0a8f0',dk:'#6878c8',gl:'rgba(160,168,240,.45)',gl2:'rgba(160,168,240,.25)'},  /* 鸢尾蓝 */
+  {lt:'#fce8d8',md:'#f8c8a0',dk:'#d89870',gl:'rgba(248,200,160,.45)',gl2:'rgba(248,200,160,.25)'},  /* 杏仁橙 */
+  {lt:'#d8fce8',md:'#a8f0c8',dk:'#70c090',gl:'rgba(168,240,200,.45)',gl2:'rgba(168,240,200,.25)'},  /* 抹茶绿 */
+  {lt:'#f8d8e8',md:'#e8a8c8',dk:'#c07898',gl:'rgba(232,168,200,.45)',gl2:'rgba(232,168,200,.25)'},  /* 玫瑰粉 */
+  {lt:'#fce8f0',md:'#f0c0d8',dk:'#d090a8',gl:'rgba(240,192,216,.45)',gl2:'rgba(240,192,216,.25)'},  /* 樱花粉 */
+  {lt:'#e8e0f0',md:'#c8b8e0',dk:'#9888b0',gl:'rgba(200,184,224,.45)',gl2:'rgba(200,184,224,.25)'}   /* 薰衣紫 */
+];
+
+/* ═══════════ 读取当前 swipe_id ═══════════ */
+function currentSwipe(){
+  try{
+    if(typeof getCurrentMessageId==='function' && typeof getChatMessages==='function'){
+      var id=getCurrentMessageId();
+      var m=getChatMessages(id,{include_swipes:true});
+      if(m&&m[0]&&typeof m[0].swipe_id==='number') return m[0].swipe_id;
+    }
+  }catch(e){}
+  return -1;
+}
+
+/* ═══════════ 跳转 ═══════════ */
+var busy=false;
+function goto(swipe){
+  if(busy)return; busy=true;
+  function done(){busy=false;}
+  try{
+    if(typeof setChatMessages==='function'){
+      Promise.resolve(setChatMessages([{message_id:0,swipe_id:swipe}],{refresh:'all'})).then(done,done);
+    }else if(typeof SillyTavern!=='undefined'&&SillyTavern.getContext){
+      var c=SillyTavern.getContext();
+      if(c&&c.setSwipe){c.setSwipe(swipe);setTimeout(done,800);}else done();
+    }else if(window.TavernHelper&&window.TavernHelper.switchMessage){
+      window.TavernHelper.switchMessage(swipe);done();
+    }else done();
+  }catch(err){done();}
+}
+
+/* ═══════════ 渲染棉花糖 puff 按钮 ═══════════ */
+var wrap=$('#jk-wrap');
+var cur=currentSwipe();
+
+function mkBtn(o,idx){
+  var cls='jk-num'+(o.n===cur?' active':'');
+  var c=ccPalette[idx];
+  return $('<div class="'+cls+'" data-swipe="'+o.n+'" style="'
+    +'--cc-lt:'+c.lt+';--cc-md:'+c.md+';--cc-dk:'+c.dk+';--cc-gl:'+c.gl+';--cc-gl2:'+c.gl2+'">'
+    +o.n
+    +'<span class="tip"><b>'+o.name+'</b><i>'+o.sub+'</i></span></div>');
+}
+for(var i=0;i<openers.length;i++) wrap.append(mkBtn(openers[i],i));
+
+wrap.on('click','.jk-num',function(){ goto(parseInt($(this).data('swipe'),10)); });
+$('#jk-back').on('click',function(){ goto(0); });
+
+/* ═══════════════════════════════════════════
+   Canvas 粒子系统：棉花糖糖晶 + 光标火花 + 糖丝线
+   ═══════════════════════════════════════════ */
+(function(){
+  var container=document.getElementById('jk-wrap');
+  var canvas=document.getElementById('jk-canvas');
+  if(!container||!canvas)return;
+
+  var ctx=canvas.getContext('2d'), w=0, h=0;
+  var ambient=[], cursorParts=[], trail=[];
+  var AMBIENT=35, MAX_CURSOR=50, MAX_TRAIL=22;
+  var REPEL_R=48, REPEL_FORCE=.40;
+  var mouseX=-200,mouseY=-200,mouseOn=false,mouseSpeed=0,lastMX=-200,lastMY=-200;
+
+  function rnd(a,b){return a+Math.random()*(b-a)}
+
+  function resize(){
+    var r=container.getBoundingClientRect();
+    w=r.width; h=r.height;
+    canvas.width=w; canvas.height=h;
+    initAmbient();
+  }
+
+  function initAmbient(){
+    ambient=[];
+    for(var i=0;i<AMBIENT;i++){
+      ambient.push({
+        x:Math.random()*w, y:Math.random()*h,
+        vx:(Math.random()-.5)*.15,
+        vy:.08+Math.random()*.35,
+        baseVy:.08+Math.random()*.35,
+        size:.4+Math.random()*1.4,
+        pink:Math.random()<.62,
+        phase:Math.random()*Math.PI*2,
+        sparkTimer:Math.random()*8
+      });
+    }
+  }
+
+  function spawnCursor(x,y,speed){
+    var count=speed>2.5?4:(speed>.8?3:2);
+    for(var i=0;i<count;i++){
+      if(cursorParts.length>=MAX_CURSOR) cursorParts.shift();
+      cursorParts.push({
+        x:x+rnd(-3,3), y:y+rnd(-3,3),
+        vx:rnd(-.6,.6), vy:rnd(-.6,.6),
+        size:.5+rnd(.3,2.2), life:1,
+        decay:.012+rnd(.006,.032),
+        pink:Math.random()<.58
+      });
+    }
+  }
+
+  var wisps=[];
+  for(var wi=0;wi<3;wi++){
+    wisps.push({
+      x1:rnd(.05,.35)*w, y1:rnd(.1,.9)*h,
+      cx1:rnd(.1,.5)*w, cy1:rnd(0,1)*h,
+      cx2:rnd(.5,.9)*w, cy2:rnd(0,1)*h,
+      x2:rnd(.65,.95)*w, y2:rnd(.1,.9)*h,
+      vx1:rnd(-.15,.15), vy1:rnd(-.1,.1),
+      vx2:rnd(-.15,.15), vy2:rnd(-.1,.1),
+      vx3:rnd(-.12,.12), vy3:rnd(-.08,.08),
+      vx4:rnd(-.12,.12), vy4:rnd(-.08,.08),
+      pink:wi<2, opacity:rnd(.025,.055)
+    });
+  }
+
+  function update(){
+    if(mouseOn){
+      trail.push({x:mouseX,y:mouseY});
+      if(trail.length>MAX_TRAIL) trail.shift();
+      var cnt=mouseSpeed>3?4:(mouseSpeed>1?3:2);
+      for(var i=0;i<cnt;i++) spawnCursor(mouseX,mouseY,mouseSpeed);
+      if(trail.length>2){
+        var step=Math.max(2,Math.floor(trail.length/6));
+        for(var k=0;k<trail.length-step;k+=step){
+          if(Math.random()<.25) spawnCursor(trail[k].x,trail[k].y,1);
+        }
+      }
+    }else{if(trail.length>0) trail.shift()}
+
+    for(var j=cursorParts.length-1;j>=0;j--){
+      var cp=cursorParts[j];
+      cp.x+=cp.vx; cp.y+=cp.vy;
+      cp.vx*=.96; cp.vy*=.96;
+      cp.life-=cp.decay;
+      if(cp.life<=0) cursorParts.splice(j,1);
+    }
+
+    var samples=[];
+    if(mouseOn) samples.push({x:mouseX,y:mouseY});
+    for(var s=0;s<trail.length;s+=4) samples.push(trail[s]);
+
+    for(var m=0;m<ambient.length;m++){
+      var ap=ambient[m];
+      if(samples.length>0&&mouseOn){
+        var tfx=0,tfy=0;
+        for(var n=0;n<samples.length;n++){
+          var dx=ap.x-samples[n].x, dy=ap.y-samples[n].y;
+          var dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist<REPEL_R&&dist>.3){
+            var f=REPEL_FORCE*Math.pow(1-dist/REPEL_R,1.5);
+            tfx+=(dx/dist)*f; tfy+=(dy/dist)*f;
+          }
+        }
+        ap.vx+=tfx; ap.vy+=tfy;
+      }
+      ap.x+=ap.vx+Math.sin(ap.phase+performance.now()*.001)*.08;
+      ap.y+=ap.vy;
+      ap.phase+=.007;
+      ap.vx*=.984; ap.vy*=.984;
+      ap.vy+=(ap.baseVy-ap.vy)*.003;
+      ap.sparkTimer+=.016;
+      if(ap.y>h+12){ap.y=-12; ap.x=Math.random()*w; ap.vx=0; ap.vy=ap.baseVy}
+      if(ap.x<-12) ap.x=w+12; if(ap.x>w+12) ap.x=-12;
+    }
+
+    for(var wi2=0;wi2<wisps.length;wi2++){
+      var ws=wisps[wi2];
+      ws.cx1+=ws.vx1; ws.cy1+=ws.vy1;
+      ws.cx2+=ws.vx2; ws.cy2+=ws.vy2;
+      ws.x1+=ws.vx3; ws.y1+=ws.vy3;
+      ws.x2+=ws.vx4; ws.y2+=ws.vy4;
+      if(ws.cx1<0||ws.cx1>w) ws.vx1*=-1; if(ws.cy1<0||ws.cy1>h) ws.vy1*=-1;
+      if(ws.cx2<0||ws.cx2>w) ws.vx2*=-1; if(ws.cy2<0||ws.cy2>h) ws.vy2*=-1;
+      if(ws.x1<0||ws.x1>w) ws.vx3*=-1; if(ws.y1<0||ws.y1>h) ws.vy3*=-1;
+      if(ws.x2<0||ws.x2>w) ws.vx4*=-1; if(ws.y2<0||ws.y2>h) ws.vy4*=-1;
+    }
+
+    if(mouseOn){
+      mouseSpeed=Math.sqrt((mouseX-lastMX)*(mouseX-lastMX)+(mouseY-lastMY)*(mouseY-lastMY));
+      lastMX=mouseX; lastMY=mouseY;
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+
+    for(var wi=0;wi<wisps.length;wi++){
+      var ws=wisps[wi];
+      var col=ws.pink?'240,168,200':'160,192,240';
+      ctx.strokeStyle='rgba('+col+','+ws.opacity+')';
+      ctx.lineWidth=.6;
+      ctx.beginPath();
+      ctx.moveTo(ws.x1,ws.y1);
+      ctx.bezierCurveTo(ws.cx1,ws.cy1,ws.cx2,ws.cy2,ws.x2,ws.y2);
+      ctx.stroke();
+    }
+
+    for(var i=0;i<ambient.length;i++){
+      var ap=ambient[i];
+      var spark=1+Math.sin(ap.sparkTimer)*.35;
+      var a=(.18+Math.sin(ap.phase)*.08)*spark;
+      var col=ap.pink?'236,168,198':'180,200,240';
+      var g=ctx.createRadialGradient(ap.x,ap.y,0,ap.x,ap.y,ap.size*3);
+      g.addColorStop(0,'rgba('+col+','+a+')');
+      g.addColorStop(.4,'rgba('+col+','+(a*.25)+')');
+      g.addColorStop(1,'rgba('+col+',0)');
+      ctx.fillStyle=g;
+      ctx.beginPath(); ctx.arc(ap.x,ap.y,ap.size*3,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba('+col+','+(a*1.5)+')';
+      ctx.beginPath(); ctx.arc(ap.x,ap.y,ap.size*.35,0,Math.PI*2); ctx.fill();
+    }
+
+    ctx.globalCompositeOperation='lighter';
+    for(var j=0;j<cursorParts.length;j++){
+      var cp=cursorParts[j];
+      var a2=cp.life*.6;
+      var col2=cp.pink?'236,168,198':'180,200,240';
+      var sz=cp.size*(1+cp.life*.6);
+      var g2=ctx.createRadialGradient(cp.x,cp.y,0,cp.x,cp.y,sz*2.5);
+      g2.addColorStop(0,'rgba('+col2+','+a2+')');
+      g2.addColorStop(.3,'rgba('+col2+','+(a2*.5)+')');
+      g2.addColorStop(1,'rgba('+col2+',0)');
+      ctx.fillStyle=g2;
+      ctx.beginPath(); ctx.arc(cp.x,cp.y,sz*2.5,0,Math.PI*2); ctx.fill();
+      var cx2=a2*.35;
+      ctx.fillStyle='rgba(255,255,255,'+cx2+')';
+      ctx.fillRect(cp.x-sz*.08,cp.y-sz*.7,sz*.16,sz*1.4);
+      ctx.fillRect(cp.x-sz*.7,cp.y-sz*.08,sz*1.4,sz*.16);
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+
+  function loop(){update();draw();requestAnimationFrame(loop)}
+
+  resize();
+  $(window).on('resize',function(){
+    clearTimeout(window._jkResize);
+    window._jkResize=setTimeout(resize,150);
+  });
+
+  container.addEventListener('mousemove',function(e){
+    var r=canvas.getBoundingClientRect();
+    mouseX=e.clientX-r.left; mouseY=e.clientY-r.top; mouseOn=true;
+  });
+  container.addEventListener('mouseenter',function(e){
+    mouseOn=true;
+    var r=canvas.getBoundingClientRect();
+    mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
+  });
+  container.addEventListener('mouseleave',function(){mouseOn=false; trail=[];});
+  loop();
+})();
+
+});
+</script>
+</body></html>
+```
